@@ -25,6 +25,7 @@ Create `SalonManager/.env` with:
 DATABASE_URL=postgresql://user:pass@host/db
 SESSION_SECRET=dev_secret_change_me
 REPLIT_DOMAINS=localhost
+PORT=5000
 ```
 
 The development server runs both the Express backend and the Vite-powered frontend on the same port.
