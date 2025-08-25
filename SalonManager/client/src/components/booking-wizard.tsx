@@ -75,6 +75,7 @@ export default function BookingWizard({ salon, isOpen, onClose }: BookingWizardP
       });
       queryClient.invalidateQueries({ queryKey: ['/api/v1/me/bookings'] });
       handleClose();
+      window.location.href = '/me/bookings';
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {

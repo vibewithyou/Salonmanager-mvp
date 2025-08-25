@@ -15,6 +15,7 @@ import SalonBooking from "@/pages/salon-booking";
 import Profile from "@/pages/profile";
 import Dashboard from "@/pages/dashboard";
 import Admin from "@/pages/admin";
+import MyBookings from "@/pages/my-bookings";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -38,6 +39,7 @@ function Router() {
           {isAuthenticated && (
             <>
               <Route path="/profile" component={Profile} />
+              <Route path="/me/bookings" component={MyBookings} />
               <Route path="/dashboard" component={Dashboard} />
               <Route path="/admin" component={Admin} />
             </>

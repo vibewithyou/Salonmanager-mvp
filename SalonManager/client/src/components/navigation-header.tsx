@@ -33,31 +33,40 @@ export default function NavigationHeader() {
             </div>
             {isAuthenticated && (
               <nav className="hidden md:ml-8 md:flex space-x-8">
-                <Link href="/">
-                  <a className={`px-3 py-2 text-sm font-medium transition-colors ${
-                    location === "/" 
-                      ? "text-gold-500" 
-                      : "text-gray-700 dark:text-gray-300 hover:text-gold-500"
-                  }`} data-testid="nav-salons">
+                <Link href="/salons">
+                  <a
+                    className={`px-3 py-2 text-sm font-medium transition-colors ${
+                      location === "/salons"
+                        ? "text-gold-500"
+                        : "text-gray-700 dark:text-gray-300 hover:text-gold-500"
+                    }`}
+                    data-testid="nav-salons"
+                  >
                     Salons
                   </a>
                 </Link>
-                <Link href="/dashboard">
-                  <a className={`px-3 py-2 text-sm font-medium transition-colors ${
-                    location === "/dashboard" 
-                      ? "text-gold-500" 
-                      : "text-gray-700 dark:text-gray-300 hover:text-gold-500"
-                  }`} data-testid="nav-dashboard">
+                <Link href={user?.role === 'customer' ? '/me/bookings' : '/dashboard'}>
+                  <a
+                    className={`px-3 py-2 text-sm font-medium transition-colors ${
+                      location === (user?.role === 'customer' ? '/me/bookings' : '/dashboard')
+                        ? "text-gold-500"
+                        : "text-gray-700 dark:text-gray-300 hover:text-gold-500"
+                    }`}
+                    data-testid="nav-dashboard"
+                  >
                     {user?.role === 'customer' ? 'Meine Termine' : 'Dashboard'}
                   </a>
                 </Link>
                 {(user?.role === 'salon_owner' || user?.role === 'owner') && (
                   <Link href="/admin">
-                    <a className={`px-3 py-2 text-sm font-medium transition-colors ${
-                      location === "/admin" 
-                        ? "text-gold-500" 
-                        : "text-gray-700 dark:text-gray-300 hover:text-gold-500"
-                    }`} data-testid="nav-admin">
+                    <a
+                      className={`px-3 py-2 text-sm font-medium transition-colors ${
+                        location === "/admin"
+                          ? "text-gold-500"
+                          : "text-gray-700 dark:text-gray-300 hover:text-gold-500"
+                      }`}
+                      data-testid="nav-admin"
+                    >
                       Verwaltung
                     </a>
                   </Link>

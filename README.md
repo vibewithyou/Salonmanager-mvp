@@ -17,4 +17,14 @@
    ```
 4. Open `http://localhost:5000` in your browser.
 
+### .env example
+
+Create `SalonManager/.env` with:
+
+```env
+DATABASE_URL=postgresql://user:pass@host/db
+SESSION_SECRET=dev_secret_change_me
+REPLIT_DOMAINS=localhost
+```
+
 The development server runs both the Express backend and the Vite-powered frontend on the same port.
