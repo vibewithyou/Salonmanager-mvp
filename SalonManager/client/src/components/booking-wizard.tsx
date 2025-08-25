@@ -25,7 +25,7 @@ interface TimeSlot {
 export default function BookingWizard({ salon, isOpen, onClose }: BookingWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [selectedStylist, setSelectedStylist] = useState<string | null>(null);
+  const [selectedStylist, setSelectedStylist] = useState<string | undefined>(undefined);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState<TimeSlot | null>(null);
   const [note, setNote] = useState('');
@@ -99,7 +99,7 @@ export default function BookingWizard({ salon, isOpen, onClose }: BookingWizardP
   const handleClose = () => {
     setCurrentStep(1);
     setSelectedService(null);
-    setSelectedStylist(null);
+    setSelectedStylist(undefined);
     setSelectedDate('');
     setSelectedTime(null);
     setNote('');

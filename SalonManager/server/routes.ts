@@ -166,18 +166,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/v1/salons/:id/slots', async (req, res) => {
     try {
       const { service_id, date, stylist_id } = req.query;
-      
       if (!service_id || !date) {
         return res.status(400).json({ message: "service_id and date are required" });
       }
-
-      const slots = await storage.getAvailableSlots(
+      const slots = await storage.findSlots(
         req.params.id,
         service_id as string,
         date as string,
         stylist_id as string | undefined
       );
-      
       res.json(slots);
     } catch (error) {
       console.error("Error fetching slots:", error);
@@ -195,55 +192,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         customerId: userId,
       });
 
-      // Calculate end time
       const service = await storage.getService(bookingData.serviceId);
       if (!service) {
         return res.status(404).json({ message: "Service not found" });
       }
 
       const startsAt = new Date(bookingData.startsAt);
-      const endsAt = new Date(startsAt.getTime() + service.durationMin * 60000);
+      const endsAt = new Date(startsAt.getTime() + (service.durationMin + 5) * 60000);
 
-      const booking = await storage.createBooking({
-        ...bookingData,
-        endsAt,
-      });
-
-      res.json(booking);
+      try {
+        const booking = await storage.createBooking({
+          ...bookingData,
+          endsAt,
+        });
+        res.json(booking);
+      } catch (err: any) {
+        if (err instanceof Error && err.message === "OVERLAP") {
+          return res.status(422).json({ errors: { starts_at: ["overlap"] } });
+        }
+        throw err;
+      }
     } catch (error) {
       console.error("Error creating booking:", error);
       res.status(500).json({ message: "Failed to create booking" });
     }
   });
 
-  app.get('/api/v1/me/bookings', isAuthenticated, async (req: any, res) => {
+  app.get('/api/v1/bookings', isAuthenticated, async (req: any, res) => {
     try {
+      const { scope, salon_id } = req.query;
       const userId = req.user.claims.sub;
-      const bookings = await storage.getBookingsByUser(userId);
-      res.json(bookings);
-    } catch (error) {
-      console.error("Error fetching user bookings:", error);
-      res.status(500).json({ message: "Failed to fetch bookings" });
-    }
-  });
 
-  // Stylist routes
-  app.get('/api/v1/me/stylist/bookings', isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      // Find stylist by user ID
-      const stylists = await storage.getStylistsBySalon(""); // This needs to be refactored to get stylist by user
-      const stylist = stylists.find(s => s.userId === userId);
-      
-      if (!stylist) {
-        return res.status(404).json({ message: "Stylist not found" });
+      if (scope === 'me') {
+        const bookings = await storage.listBookingsForUser(userId);
+        return res.json(bookings);
       }
 
-      const bookings = await storage.getBookingsByStylist(stylist.id);
-      res.json(bookings);
+      if (scope === 'salon') {
+        if (!salon_id) {
+          return res.status(400).json({ message: 'salon_id required' });
+        }
+        const bookings = await storage.listBookingsForSalon(salon_id as string);
+        return res.json(bookings);
+      }
+
+      return res.status(400).json({ message: 'Invalid scope' });
     } catch (error) {
-      console.error("Error fetching stylist bookings:", error);
-      res.status(500).json({ message: "Failed to fetch bookings" });
+      console.error('Error fetching bookings:', error);
+      res.status(500).json({ message: 'Failed to fetch bookings' });
     }
   });
 
@@ -255,7 +251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid status" });
       }
 
-      const booking = await storage.updateBooking(req.params.id, { status });
+      const booking = await storage.updateBookingStatus(req.params.id, status);
       res.json(booking);
     } catch (error) {
       console.error("Error updating booking:", error);
