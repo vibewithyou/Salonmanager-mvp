@@ -3,14 +3,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "wouter";
 
 export default function Landing() {
-  const handleLogin = () => {
-    window.location.href = "/api/login";
-  };
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-900 to-dark-800 text-white">
       {/* Hero Section */}
-      <div 
+      <div
         className="relative py-32 px-4 sm:px-6 lg:px-8"
         style={{
           backgroundImage: `url('https://images.unsplash.com/photo-1519501025264-65ba15a82390?ixlib=rb-4.0.3&auto=format&fit=crop&w=2048&h=1024')`,
@@ -22,31 +18,28 @@ export default function Landing() {
         <div className="relative max-w-7xl mx-auto text-center">
           <div className="mb-8">
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              <span className="text-gold-500">SalonManager</span>
+              <span className="text-gold-500">SM</span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-              Professionelle Salon-Verwaltung für moderne Friseure
+              Dein Style. Dein Salon.
             </p>
           </div>
-          
+
           <div className="space-y-4">
             <h2 className="text-3xl md:text-5xl font-bold mb-6">
-              Finden Sie Ihren <span className="text-gold-500">perfekten</span> Friseur
+              Buche Termine in Sekunden – mit <span className="text-gold-500">SalonManager</span>
             </h2>
-            <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
-              Entdecken Sie die besten Salons in Freiberg und buchen Sie Ihren Termin online
-            </p>
-            
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                onClick={handleLogin}
-                className="bg-gold-500 hover:bg-gold-600 text-dark-900 px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all"
-                data-testid="button-login"
-              >
-                Jetzt anmelden
-              </Button>
+              <Link href="/salons">
+                <Button
+                  className="bg-gold-500 hover:bg-gold-600 text-dark-900 px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all"
+                  data-testid="button-explore-salons"
+                >
+                  Salons entdecken
+                </Button>
+              </Link>
               <Link href="/about">
-                <Button 
+                <Button
                   variant="outline"
                   className="border-2 border-gold-500 text-gold-500 hover:bg-gold-500 hover:text-dark-900 px-8 py-4 text-lg font-semibold"
                   data-testid="button-learn-more"
