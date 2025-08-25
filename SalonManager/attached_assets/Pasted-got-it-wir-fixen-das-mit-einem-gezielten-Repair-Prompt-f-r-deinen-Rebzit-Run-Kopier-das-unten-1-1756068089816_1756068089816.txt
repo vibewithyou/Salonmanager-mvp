@@ -1,0 +1,179 @@
+got it — wir fixen das mit einem gezielten Repair‑Prompt für deinen „Rebzit“-Run. Kopier das unten 1:1 in dein KI‑Tool. Er beschreibt präzise, was kaputt ist, was fehlen darf nicht, und welche Änderungen (Routen, State, Klick‑Handler, Daten, Theme) jetzt umgesetzt werden müssen – inkl. echter DEMO‑Seeds für die drei Freiberg‑Salons.
+
+⸻
+
+Repair‑Prompt: SalonManager MVP (Fix Navigation, Guest‑Flow, Data, Theme)
+
+Kontext & Ziel
+Die generierte App zeigt nur eine Startseite mit „Anmelden“ und „Mehr erfahren“. Viele Buttons reagieren nicht („Termin buchen“, „Salons entdecken“, Profil‑Icon). Der Dark/Light‑Mode färbt den Header nicht um. Die Liste/Karte enthält keine Salons.
+Ziel: Voll funktionsfähiger Guest‑Flow ohne Zwangs‑Login, klickbare Navigation, echte Salon‑Daten (DEMO), funktionierender Theme‑Toggle (inkl. Header), Buchungs‑Wizard‑Stub, Profil‑Screen.
+
+⸻
+
+1) Routing & Navigation (go_router)
+	•	Stelle sicher, dass MaterialApp.router mit GoRouter verwendet wird.
+	•	Lege folgende Routen an und verdrahte Buttons onPressed:
+	•	/ → HomeScreen (Landing, ohne Login nutzbar)
+	•	/about → AboutScreen (Ziel von „Mehr erfahren“)
+	•	/salons → SalonExploreScreen (Tabs: Liste | Karte)
+	•	/salon/:id → SalonDetailScreen
+	•	/salon/:id/book → BookingWizardScreen (Stub ok)
+	•	/profile → ProfileScreen (Icon oben rechts)
+	•	/login → **LoginScreen`
+	•	Button‑Wiring:
+	•	Home: „Salons entdecken“ → context.go('/salons')
+	•	Home: „Termin buchen“ → context.go('/salons') (oder wenn selectedSalonId vorhanden → /salon/<id>/book)
+	•	Home: „Mehr erfahren“ → context.go('/about')
+	•	AppBar Profil‑Icon → context.go('/profile')
+
+Done, wenn: Jeder der o. g. Buttons navigiert zur richtigen Seite; Zurücknavigation funktioniert.
+
+⸻
+
+2) Guest‑Mode (kein Zwangs‑Login)
+	•	Implementiere AuthState via Riverpod (guest | authenticated).
+	•	Als Gast sind erlaubt: Salons ansehen (Liste/Karte/Detail), Leistungen sehen, Buchungs‑Wizard öffnen bis Step „Bestätigen“.
+	•	Login erst beim finalen Buchungs‑Submit erzwingen: Wenn nicht eingeloggt, modales Sheet „Einloggen oder als Gast weiterstöbern“; bei „Einloggen“ → /login; bei „Später“ → Wizard bleibt offen, Submit disabled.
+
+Done, wenn: App ist vollständig browsbar ohne Login; nur der Buchungs‑Submit fordert Login.
+
+⸻
+
+3) Salons & Daten (Repository + Provider)
+	•	Erzeuge SalonsRepository (Dio) + salonListProvider, salonDetailProvider.
+	•	Primärquelle: GET /api/v1/salons (konfigurierbare BASE_URL).
+	•	Fallback (DEMO): Wenn HTTP fehlschlägt, lade eingebettetes JSON aus assets/salons.json. (Nur als DEV‑Fallback; klar kommentieren.)
+
+assets/salons.json (DEMO, 09599 Freiberg)
+
+[
+  {
+    "id": 1,
+    "name": "BARBERs Freiberg",
+    "slug": "barbers-freiberg",
+    "address": "09599 Freiberg, DE",
+    "lat": 50.9159,
+    "lng": 13.3422,
+    "phone": "+49 3731 123456",
+    "email": "barbers@salonmanager.app",
+    "services": [
+      {"id": 101, "title": "Herrenhaarschnitt", "duration_min": 60, "price_cents": 6000},
+      {"id": 102, "title": "Damenschnitt", "duration_min": 60, "price_cents": 6000},
+      {"id": 103, "title": "Färben", "duration_min": 60, "price_cents": 6000}
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Haarschneiderei Freiberg",
+    "slug": "haarschneiderei-freiberg",
+    "address": "09599 Freiberg, DE",
+    "lat": 50.9166,
+    "lng": 13.3440,
+    "phone": "+49 3731 654321",
+    "email": "haarschneiderei@salonmanager.app",
+    "services": [
+      {"id": 201, "title": "Herrenhaarschnitt", "duration_min": 60, "price_cents": 6000},
+      {"id": 202, "title": "Damenschnitt", "duration_min": 60, "price_cents": 6000},
+      {"id": 203, "title": "Färben", "duration_min": 60, "price_cents": 6000}
+    ]
+  },
+  {
+    "id": 3,
+    "name": "Klier Freiberg",
+    "slug": "klier-freiberg",
+    "address": "09599 Freiberg, DE",
+    "lat": 50.9149,
+    "lng": 13.3407,
+    "phone": "+49 3731 987654",
+    "email": "klier@salonmanager.app",
+    "services": [
+      {"id": 301, "title": "Herrenhaarschnitt", "duration_min": 60, "price_cents": 6000},
+      {"id": 302, "title": "Damenschnitt", "duration_min": 60, "price_cents": 6000},
+      {"id": 303, "title": "Färben", "duration_min": 60, "price_cents": 6000}
+    ]
+  }
+]
+
+Done, wenn: /salons zeigt Karten‑Marker und Liste mit genau diesen 3 Salons.
+
+⸻
+
+4) Karte & Liste (flutter_map)
+	•	flutter_map + latlong2 verwenden.
+	•	Marker aus salonListProvider; Marker‑Tap → context.go('/salon/<id>').
+	•	Listen‑Tab mit Cards (Name, Adresse, CTA „Buchen“ → /salon/<id>/book).
+
+Done, wenn: Marker klicken öffnet Detail; Liste & Karte sind synchron.
+
+⸻
+
+5) Salon‑Detail & Booking‑Wizard (Stub, aber klickbar)
+	•	SalonDetailScreen zeigt: Name, Adresse, Öffnungszeiten (falls vorhanden), Services (aus Daten), Button „Termin buchen“.
+	•	BookingWizardScreen (3 Steps):
+	1.	Service wählen
+	2.	Datum/Zeit (für MVP: Stub mit „Heute 10:00, 11:00, 12:00“ – vorbereiteter State, später per API)
+	3.	Notiz + Bestätigen (wenn authState == guest → Dialog zum Login; wenn authenticated → Snack „Buchungsanfrage gesendet“)
+	•	Wizard State via Riverpod (bookingDraftProvider).
+
+Done, wenn: Der komplette Wizard ist durchklickbar; bei Gast kein Crash; bei Auth Snackbar.
+
+⸻
+
+6) Profil‑Icon & Screen
+	•	AppBar rechts: Profil‑Avatar (Platzhalter‑Initialen).
+	•	onPressed → /profile.
+	•	ProfileScreen: Anzeigen von user.email, Buttons: „Einstellungen (Stub)“, „Theme wechseln“, „Logout“.
+	•	Logout leert Auth‑State und navigiert zu /.
+
+Done, wenn: Profil‑Icon öffnet Profil‑Screen; Logout wirkt.
+
+⸻
+
+7) Theme/Dark‑Mode (Header fixen)
+	•	Lege ThemeMode in Riverpod ab (themeModeProvider).
+	•	Verwende ThemeData mit colorScheme (light/dark) und sorge dafür, dass AppBar und Scaffold Farben aus dem Theme beziehen, keine festen Farben.
+	•	AppBar.backgroundColor = Theme.of(context).colorScheme.surface
+	•	AppBar.foregroundColor = Theme.of(context).colorScheme.onSurface
+	•	Buttons, Tabs, Marker in Schwarz/Gold (Gold = Color(0xFFFFD700)), aber über colorScheme.primary lösen.
+
+Done, wenn: Beim Umschalten wechselt der Header korrekt mit.
+
+⸻
+
+8) Option Backend‑Seeds (Laravel 12) – wenn Backend vorhanden
+	•	Migrations: salons, services, users, stylists (vereinfachte MVP‑Version).
+	•	Seeder legt exakt die 3 Salons + Services + minimal 1‑2 User an:
+	•	Global Owner: owner@salonmanager.app / Owner!12345
+	•	BARBERs Owner (auch Stylist): martin.pieske@salonmanager.app / SmBarbers!123
+	•	Demo‑Kunde: kunde.demo@salonmanager.app / SmKunde!123
+	•	Endpoint GET /api/v1/salons liefert Salon + Services (ohne Auth zugelassen – read‑only).
+	•	Später: /slots und POST /bookings, vorerst nicht notwendig.
+
+Done, wenn: Frontend lädt Daten primär aus /api/v1/salons.
+
+⸻
+
+9) Fehler abstellen (Regression‑Checks)
+	•	„Mehr erfahren“ zeigt /about (kein toter Button).
+	•	„Jetzt anmelden“ führt zu /login (Form vorhanden; nach Login erscheint Profil‑Icon).
+	•	„Termin buchen“ & „Salons entdecken“ navigieren (kein No‑Op).
+	•	Map/List Tabs dauerhaft sichtbar und gefüllt.
+	•	Keine Exceptions im Log beim Wechsel Dark/Light.
+
+⸻
+
+10) Mini‑Tests (manuell reichen)
+	•	Home → About → Back.
+	•	Home → Salons → Marker → Detail → Buchen → Wizard Step 1‑3 durchklicken.
+	•	Theme toggle: prüfe Header‑Farbe.
+	•	Profil‑Icon → Profile → Logout.
+
+Akzeptanz (DoD): Alle o. g. Klickpfade funktionieren ohne Backend‑Abhängigkeit (Fallback JSON), und mit Backend zieht die App automatisch Live‑Daten.
+
+⸻
+
+Implementiere die Änderungen jetzt.
+
+⸻
+
+Wenn du magst, kann ich dir zusätzlich kleine Code‑Snippets liefern (go_router‑Setup, Riverpod‑Provider, ThemeData light/dark, flutter_map‑Widget). Sag einfach „gib mir die Snippets“, dann hau ich dir die fertigen Blöcke raus.

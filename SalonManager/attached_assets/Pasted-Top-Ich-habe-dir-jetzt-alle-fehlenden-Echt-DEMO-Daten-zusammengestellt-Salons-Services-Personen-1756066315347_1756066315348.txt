@@ -1,0 +1,239 @@
+Top! Ich habe dir jetzt alle fehlenden Echt-/DEMO‑Daten zusammengestellt (Salons, Services, Personen, Logins, Work‑Hours etc.) und daraus einen build‑ready Prompt gemacht, den du 1:1 in deine Code‑KI pasten kannst. Kein Dummy‑Code nötig – die Seeds liefern sofort lauffähige Demo‑Daten, klar als DEMO markiert.
+
+⸻
+
+1) Festgelegte MVP‑Daten (für Seeder, Tests & Logins)
+
+A. Salons (09599 Freiberg, DE) – DEMO, Adressen noch Platzhalter
+
+Koordinaten = Stadtzentrum + kleine Offsets (kannst du später durch echte ersetzen)
+
+	1.	BARBERs Freiberg
+
+	•	slug: barbers-freiberg
+	•	address: 09599 Freiberg, DE
+	•	lat,lng: 50.9159, 13.3422
+	•	phone: +49 3731 123456
+	•	email: barbers@salonmanager.app
+	•	open_hours_json (Mo–Fr 09–18, Sa 10–14)
+
+	2.	Haarschneiderei Freiberg
+
+	•	slug: haarschneiderei-freiberg
+	•	address: 09599 Freiberg, DE
+	•	lat,lng: 50.9166, 13.3440
+	•	phone: +49 3731 654321
+	•	email: haarschneiderei@salonmanager.app
+	•	open_hours_json (Mo–Fr 09–18, Sa 10–14)
+
+	3.	Klier Freiberg
+
+	•	slug: klier-freiberg
+	•	address: 09599 Freiberg, DE
+	•	lat,lng: 50.9149, 13.3407
+	•	phone: +49 3731 987654
+	•	email: klier@salonmanager.app
+	•	open_hours_json (Mo–Fr 09–18, Sa 10–14)
+
+B. Services je Salon (einheitlich)
+	•	Herrenhaarschnitt – duration_min: 60, price_cents: 6000
+	•	Damenschnitt – duration_min: 60, price_cents: 6000
+	•	Färben – duration_min: 60, price_cents: 6000
+
+C. Benutzer & Rollen (+ Stylisten)
+
+E‑Mails enden auf @salonmanager.app, Passwörter nur für DEV.
+Hinweis: owner ist Plattform‑Owner (global). salon_owner je Salon.
+
+Global Owner (Plattform)
+	•	owner@salonmanager.app / Passwort: Owner!12345 → role: owner
+
+BARBERs (salon_owner + Team)
+	•	Owner + Stylist: Martin Pieske → martin.pieske@salonmanager.app / SmBarbers!123 → roles: salon_owner, zusätzlich Stylist‑Eintrag
+	•	Stylistin: Rita → rita@salonmanager.app / SmRita!123
+	•	Stylistin: Susi → susi@salonmanager.app / SmSusi!123
+	•	Stylistin: Rebekka → rebekka@salonmanager.app / SmRebekka!123
+	•	Azubi Josie → josie.azubi@salonmanager.app / SmJosie!123 (role: stylist, Flag is_apprentice: true im Profil)
+
+Haarschneiderei (fiktiv)
+	•	Salon‑Owner: Klara Vogel → klara.vogel@salonmanager.app / SmKlara!123
+	•	Stylistin: Lena Hartmann → lena.hartmann@salonmanager.app / SmLena!123
+	•	Stylist: Tom Seidel → tom.seidel@salonmanager.app / SmTom!123
+
+Klier (fiktiv)
+	•	Filialleitung (salon_owner): Jana Müller → jana.mueller@salonmanager.app / SmJana!123
+	•	Stylist: Paul Richter → paul.richter@salonmanager.app / SmPaul!123
+	•	Stylistin: Mara Nguyen → mara.nguyen@salonmanager.app / SmMara!123
+	•	Azubi Ben → ben.azubi@salonmanager.app / SmBen!123
+
+Demo‑Kunde (zum Testen)
+	•	kunde.demo@salonmanager.app / SmKunde!123 → role: customer
+
+D. Arbeitszeiten & Abwesenheiten (für Slots)
+	•	work_hours (alle Stylisten, alle Salons)
+	•	Mo–Fr: 09:00–18:00
+	•	Sa: 10:00–14:00
+	•	So: geschlossen
+	•	absences: leer (kannst du später setzen)
+	•	Slot‑Step: 15 Min • Buffer: 5 Min
+
+⸻
+
+2) .env.example (Backend) – vorbereitet
+
+SMTP/DB kommen später von dir – hier Platzhalter, damit alles startet.
+
+APP_NAME=SalonManager
+APP_ENV=local
+APP_KEY=
+APP_DEBUG=true
+APP_URL=http://localhost
+
+LOG_CHANNEL=stack
+LOG_LEVEL=debug
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=salonmanager
+DB_USERNAME=sm_admin
+DB_PASSWORD=changeMe
+
+BROADCAST_DRIVER=log
+CACHE_DRIVER=file
+FILESYSTEM_DISK=public
+QUEUE_CONNECTION=sync
+SESSION_DRIVER=cookie
+SESSION_LIFETIME=120
+
+SANCTUM_STATEFUL_DOMAINS=localhost,localhost:5173,127.0.0.1,127.0.0.1:5173
+FRONTEND_URL=http://localhost:5173
+
+MAIL_MAILER=smtp
+MAIL_HOST=mailhog
+MAIL_PORT=1025
+MAIL_USERNAME=null
+MAIL_PASSWORD=null
+MAIL_ENCRYPTION=null
+MAIL_FROM_ADDRESS=no-reply@salonmanager.app
+MAIL_FROM_NAME="${APP_NAME}"
+
+
+⸻
+
+3) Build‑ready Prompt für deine Code‑KI (komplett)
+
+So verwenden: Als System-/Projekt‑Prompt einfügen und „Build MVP now“ ausführen.
+
+Du bist Lead-Engineer. Baue das MVP "SalonManager" exakt nach diesen Spezifikationen.
+
+STACK & REGELN
+- Frontend: Flutter 3 (Web PWA, Android, iOS), Riverpod, go_router, Dio, flutter_secure_storage, flutter_map.
+- Backend: Laravel 12 + MySQL, Sanctum (SPA für PWA; später PAT für Mobile), CORS + Rate Limiting.
+- Mandantentrennung: Jede Ressource besitzt salon_id; serverseitig harter Filter (Policies/Middleware).
+- RBAC-Rollen: owner (global), salon_owner, stylist, customer (MVP).
+- API-Version: /api/v1/*, JSON-Fehlerformat konsistent.
+- Design: Schwarz/Gold, Dark & Light Mode, PWA-Manifest + Service Worker.
+- Qualität: Feature-Slices, mind. 1 Happy-Path-Test Backend + 1 Widget/Flow-Test Frontend.
+- KEIN Dummy-Code. Nutze unten stehende echten DEMO-Datensätze als Seeder-Quelle.
+
+MONOREPO
+salonmanager/{backend(Laravel12),frontend(Flutter)}
+
+DATENMODELL (MVP)
+users(id,name,email,password,role)
+salons(id,name,slug,address,lat,lng,phone,email,open_hours_json,theme_json)
+services(id,salon_id,title,duration_min,price_cents,active)
+stylists(id,salon_id,user_id,display_name,avatar_url,active,is_apprentice)
+work_hours(id,salon_id,stylist_id,weekday,start_time,end_time)
+absences(id,salon_id,stylist_id,starts_at,ends_at,reason)
+bookings(id,salon_id,customer_id,stylist_id?,service_id,starts_at,ends_at,status[n:requested|confirmed|declined|cancelled],note)
+
+API CONTRACTS (/api/v1)
+POST  /auth/login           {email,password} -> {user,role,token?}
+POST  /auth/logout
+GET   /me                   -> {user,role}
+
+GET   /salons               -> [{...}]
+GET   /salons/{id}          -> {..., services:[...], stylists:[...]}
+GET   /salons/{id}/services
+GET   /salons/{id}/stylists
+GET   /salons/{id}/slots?service_id=&date=YYYY-MM-DD&stylist_id?
+POST  /salons/{id}/bookings {service_id,stylist_id?,starts_at,note?} -> {id,status,starts_at,ends_at}
+
+# Mini-Admin (nur salon_owner)
+POST  /salons/{id}/services; PATCH /services/{id}; DELETE /services/{id}
+POST  /salons/{id}/stylists; PATCH /stylists/{id}; DELETE /stylists/{id}
+PATCH /bookings/{id} {status: confirmed|declined|cancelled}
+
+SECURITY
+- Sanctum SPA Cookies (Web), CSRF Flow aktivieren.
+- Policies: Customer nur eigene Bookings; Stylist nur im eigenen Salon; salon_owner im eigenen Salon.
+- RateLimiter 'api' 60/min; CORS nur definierte Origins (localhost, PWA).
+- Audit-Log light: user_id, action, entity, entity_id, meta_json für Login, Booking-Statuswechsel.
+
+SLOTS/AVAILABILITY
+- Slot-Step 15min, Buffer 5min; Work-Hours + Absences + overlap-check (status != cancelled).
+- Wenn kein Stylist gewählt: liefere Slots je Stylist oder weise freien Stylisten zu.
+
+FRONTEND FLOWS
+- Auth: Login/Logout, gespeicherter Token/Cookie.
+- Home: Tabs Liste | Karte (flutter_map, Marker = Salons), Marker->Salon-Detail.
+- Salon-Detail: Info, Services, Stylisten, CTA "Buchen".
+- Booking Wizard: 1) Service 2) (optional) Stylist 3) Datum/Zeit (Slots) 4) Notiz 5) Bestätigen.
+- Stylist Dashboard: Tagesansicht, Confirm/Decline Buttons.
+- Mini-Admin: Services CRUD, Stylists CRUD.
+- Theme: Schwarz/Gold (Light/Dark).
+
+SEEDS (DEMO; produktiv austauschbar)
+SALONS:
+- BARBERs Freiberg | slug barbers-freiberg | address "09599 Freiberg, DE" | lat 50.9159 | lng 13.3422 | phone +49 3731 123456 | email barbers@salonmanager.app | hours Mo-Fr 09-18, Sa 10-14
+- Haarschneiderei Freiberg | slug haarschneiderei-freiberg | address "09599 Freiberg, DE" | lat 50.9166 | lng 13.3440 | phone +49 3731 654321 | email haarschneiderei@salonmanager.app | hours Mo-Fr 09-18, Sa 10-14
+- Klier Freiberg | slug klier-freiberg | address "09599 Freiberg, DE" | lat 50.9149 | lng 13.3407 | phone +49 3731 987654 | email klier@salonmanager.app | hours Mo-Fr 09-18, Sa 10-14
+
+SERVICES (pro Salon identisch):
+- Herrenhaarschnitt: duration 60, price_cents 6000, active true
+- Damenschnitt: duration 60, price_cents 6000, active true
+- Färben: duration 60, price_cents 6000, active true
+
+USERS & ROLES:
+- owner@salonmanager.app / Owner!12345 -> role owner
+# BARBERS (salon_owner + stylists)
+- martin.pieske@salonmanager.app / SmBarbers!123 -> role salon_owner + stylist(display_name "Martin Pieske")
+- rita@salonmanager.app / SmRita!123 -> role stylist
+- susi@salonmanager.app / SmSusi!123 -> role stylist
+- rebekka@salonmanager.app / SmRebekka!123 -> role stylist
+- josie.azubi@salonmanager.app / SmJosie!123 -> role stylist, is_apprentice true
+# HAARSCHNEIDEREI
+- klara.vogel@salonmanager.app / SmKlara!123 -> role salon_owner + stylist("Klara Vogel")
+- lena.hartmann@salonmanager.app / SmLena!123 -> role stylist
+- tom.seidel@salonmanager.app / SmTom!123 -> role stylist
+# KLIER
+- jana.mueller@salonmanager.app / SmJana!123 -> role salon_owner + stylist("Jana Müller")
+- paul.richter@salonmanager.app / SmPaul!123 -> role stylist
+- mara.nguyen@salonmanager.app / SmMara!123 -> role stylist
+- ben.azubi@salonmanager.app / SmBen!123 -> role stylist, is_apprentice true
+# DEMO-KUNDE
+- kunde.demo@salonmanager.app / SmKunde!123 -> role customer
+
+WORK_HOURS (alle Stylisten, alle Salons)
+- Mo-Fr 09:00-18:00, Sa 10:00-14:00, So geschlossen
+ABSENCES: leer
+
+.BACKEND .ENV.EXAMPLE
+(Erzeuge Datei mit obigem Inhalt; DB/SMTP später befüllt. MAIL_FROM = no-reply@salonmanager.app)
+
+AKZEPTANZ (DoD)
+- Login Web (Sanctum) + Mobile (optional PAT), RBAC greift.
+- Karte zeigt 3 Salons, Marker öffnen Profil mit "Buchen".
+- Slots berücksichtigen Work_Hours/Overlap, 15min-Step, 5min-Buffer.
+- Booking happy path: Kunde bucht; Stylist bestätigt/ablehnt; Statuswechsel via Policy geschützt.
+- Mini-Admin: Services/Stylisten verwaltbar.
+- PWA installierbar; 1 Backend-Feature-Test (Overlap), 1 Frontend-Flowtest (Wizard) grün.
+- ZIP-Artefakte + README (Setup & Run) erzeugen.
+
+
+⸻
+
+4) Nächste sinnvolle Ergänzung (wenn du willst)
+	•	Ich kann dir direkt Seeder‑JSON/YAML und Laravel‑Factories daraus generieren, plus Controller‑Skeletons (Requests + Policies) und den Flutter‑Booking‑Wizard (3 Screens, Riverpod‑State) zum Einfügen. Sag einfach „Go Seeder & Skeletons“.

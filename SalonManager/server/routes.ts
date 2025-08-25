@@ -1,0 +1,305 @@
+import type { Express } from "express";
+import { createServer, type Server } from "http";
+import { storage } from "./storage";
+import { setupAuth, isAuthenticated } from "./replitAuth";
+import { insertSalonSchema, insertServiceSchema, insertStylistSchema, insertBookingSchema } from "@shared/schema";
+import { z } from "zod";
+
+export async function registerRoutes(app: Express): Promise<Server> {
+  // Auth middleware
+  await setupAuth(app);
+
+  // Seed data - run this once to populate the database
+  app.post('/api/v1/seed', async (req, res) => {
+    try {
+      // Create demo salons
+      const salonsData = [
+        {
+          name: "BARBERs Freiberg",
+          slug: "barbers-freiberg",
+          address: "09599 Freiberg, DE",
+          lat: "50.9159",
+          lng: "13.3422",
+          phone: "+49 3731 123456",
+          email: "barbers@salonmanager.app",
+          openHoursJson: {
+            monday: { start: "09:00", end: "18:00" },
+            tuesday: { start: "09:00", end: "18:00" },
+            wednesday: { start: "09:00", end: "18:00" },
+            thursday: { start: "09:00", end: "18:00" },
+            friday: { start: "09:00", end: "18:00" },
+            saturday: { start: "10:00", end: "14:00" },
+            sunday: null
+          }
+        },
+        {
+          name: "Haarschneiderei Freiberg",
+          slug: "haarschneiderei-freiberg",
+          address: "09599 Freiberg, DE",
+          lat: "50.9166",
+          lng: "13.3440",
+          phone: "+49 3731 654321",
+          email: "haarschneiderei@salonmanager.app",
+          openHoursJson: {
+            monday: { start: "09:00", end: "18:00" },
+            tuesday: { start: "09:00", end: "18:00" },
+            wednesday: { start: "09:00", end: "18:00" },
+            thursday: { start: "09:00", end: "18:00" },
+            friday: { start: "09:00", end: "18:00" },
+            saturday: { start: "10:00", end: "14:00" },
+            sunday: null
+          }
+        },
+        {
+          name: "Klier Freiberg",
+          slug: "klier-freiberg",
+          address: "09599 Freiberg, DE",
+          lat: "50.9149",
+          lng: "13.3407",
+          phone: "+49 3731 987654",
+          email: "klier@salonmanager.app",
+          openHoursJson: {
+            monday: { start: "09:00", end: "18:00" },
+            tuesday: { start: "09:00", end: "18:00" },
+            wednesday: { start: "09:00", end: "18:00" },
+            thursday: { start: "09:00", end: "18:00" },
+            friday: { start: "09:00", end: "18:00" },
+            saturday: { start: "10:00", end: "14:00" },
+            sunday: null
+          }
+        }
+      ];
+
+      const createdSalons = [];
+      for (const salonData of salonsData) {
+        const salon = await storage.createSalon(salonData);
+        createdSalons.push(salon);
+
+        // Create services for each salon
+        const servicesData = [
+          { salonId: salon.id, title: "Herrenhaarschnitt", durationMin: 60, priceCents: 6000 },
+          { salonId: salon.id, title: "Damenschnitt", durationMin: 60, priceCents: 6000 },
+          { salonId: salon.id, title: "Färben", durationMin: 60, priceCents: 6000 }
+        ];
+
+        for (const serviceData of servicesData) {
+          await storage.createService(serviceData);
+        }
+      }
+
+      res.json({ message: "Seed data created successfully", salons: createdSalons });
+    } catch (error) {
+      console.error("Error seeding data:", error);
+      res.status(500).json({ message: "Failed to seed data" });
+    }
+  });
+
+  // Auth routes
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
+  // Public routes
+  app.get('/api/v1/salons', async (req, res) => {
+    try {
+      const salons = await storage.getSalons();
+      res.json(salons);
+    } catch (error) {
+      console.error("Error fetching salons:", error);
+      res.status(500).json({ message: "Failed to fetch salons" });
+    }
+  });
+
+  app.get('/api/v1/salons/:id', async (req, res) => {
+    try {
+      const salon = await storage.getSalon(req.params.id);
+      if (!salon) {
+        return res.status(404).json({ message: "Salon not found" });
+      }
+      res.json(salon);
+    } catch (error) {
+      console.error("Error fetching salon:", error);
+      res.status(500).json({ message: "Failed to fetch salon" });
+    }
+  });
+
+  app.get('/api/v1/salons/by-slug/:slug', async (req, res) => {
+    try {
+      const salon = await storage.getSalonBySlug(req.params.slug);
+      if (!salon) {
+        return res.status(404).json({ message: "Salon not found" });
+      }
+      res.json(salon);
+    } catch (error) {
+      console.error("Error fetching salon:", error);
+      res.status(500).json({ message: "Failed to fetch salon" });
+    }
+  });
+
+  app.get('/api/v1/salons/:id/services', async (req, res) => {
+    try {
+      const services = await storage.getServicesBySalon(req.params.id);
+      res.json(services);
+    } catch (error) {
+      console.error("Error fetching services:", error);
+      res.status(500).json({ message: "Failed to fetch services" });
+    }
+  });
+
+  app.get('/api/v1/salons/:id/stylists', async (req, res) => {
+    try {
+      const stylists = await storage.getStylistsBySalon(req.params.id);
+      res.json(stylists);
+    } catch (error) {
+      console.error("Error fetching stylists:", error);
+      res.status(500).json({ message: "Failed to fetch stylists" });
+    }
+  });
+
+  app.get('/api/v1/salons/:id/slots', async (req, res) => {
+    try {
+      const { service_id, date, stylist_id } = req.query;
+      
+      if (!service_id || !date) {
+        return res.status(400).json({ message: "service_id and date are required" });
+      }
+
+      const slots = await storage.getAvailableSlots(
+        req.params.id,
+        service_id as string,
+        date as string,
+        stylist_id as string | undefined
+      );
+      
+      res.json(slots);
+    } catch (error) {
+      console.error("Error fetching slots:", error);
+      res.status(500).json({ message: "Failed to fetch slots" });
+    }
+  });
+
+  // Protected routes
+  app.post('/api/v1/salons/:id/bookings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const bookingData = insertBookingSchema.parse({
+        ...req.body,
+        salonId: req.params.id,
+        customerId: userId,
+      });
+
+      // Calculate end time
+      const service = await storage.getService(bookingData.serviceId);
+      if (!service) {
+        return res.status(404).json({ message: "Service not found" });
+      }
+
+      const startsAt = new Date(bookingData.startsAt);
+      const endsAt = new Date(startsAt.getTime() + service.durationMin * 60000);
+
+      const booking = await storage.createBooking({
+        ...bookingData,
+        endsAt,
+      });
+
+      res.json(booking);
+    } catch (error) {
+      console.error("Error creating booking:", error);
+      res.status(500).json({ message: "Failed to create booking" });
+    }
+  });
+
+  app.get('/api/v1/me/bookings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const bookings = await storage.getBookingsByUser(userId);
+      res.json(bookings);
+    } catch (error) {
+      console.error("Error fetching user bookings:", error);
+      res.status(500).json({ message: "Failed to fetch bookings" });
+    }
+  });
+
+  // Stylist routes
+  app.get('/api/v1/me/stylist/bookings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      // Find stylist by user ID
+      const stylists = await storage.getStylistsBySalon(""); // This needs to be refactored to get stylist by user
+      const stylist = stylists.find(s => s.userId === userId);
+      
+      if (!stylist) {
+        return res.status(404).json({ message: "Stylist not found" });
+      }
+
+      const bookings = await storage.getBookingsByStylist(stylist.id);
+      res.json(bookings);
+    } catch (error) {
+      console.error("Error fetching stylist bookings:", error);
+      res.status(500).json({ message: "Failed to fetch bookings" });
+    }
+  });
+
+  app.patch('/api/v1/bookings/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { status } = req.body;
+      
+      if (!["confirmed", "declined", "cancelled"].includes(status)) {
+        return res.status(400).json({ message: "Invalid status" });
+      }
+
+      const booking = await storage.updateBooking(req.params.id, { status });
+      res.json(booking);
+    } catch (error) {
+      console.error("Error updating booking:", error);
+      res.status(500).json({ message: "Failed to update booking" });
+    }
+  });
+
+  // Admin routes (salon_owner only)
+  app.post('/api/v1/salons/:id/services', isAuthenticated, async (req: any, res) => {
+    try {
+      const serviceData = insertServiceSchema.parse({
+        ...req.body,
+        salonId: req.params.id,
+      });
+
+      const service = await storage.createService(serviceData);
+      res.json(service);
+    } catch (error) {
+      console.error("Error creating service:", error);
+      res.status(500).json({ message: "Failed to create service" });
+    }
+  });
+
+  app.patch('/api/v1/services/:id', isAuthenticated, async (req, res) => {
+    try {
+      const serviceData = insertServiceSchema.partial().parse(req.body);
+      const service = await storage.updateService(req.params.id, serviceData);
+      res.json(service);
+    } catch (error) {
+      console.error("Error updating service:", error);
+      res.status(500).json({ message: "Failed to update service" });
+    }
+  });
+
+  app.delete('/api/v1/services/:id', isAuthenticated, async (req, res) => {
+    try {
+      await storage.deleteService(req.params.id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting service:", error);
+      res.status(500).json({ message: "Failed to delete service" });
+    }
+  });
+
+  const httpServer = createServer(app);
+  return httpServer;
+}

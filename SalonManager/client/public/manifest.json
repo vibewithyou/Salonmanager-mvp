@@ -1,0 +1,73 @@
+{
+  "name": "SalonManager",
+  "short_name": "SalonManager",
+  "description": "Professionelle Salon-Verwaltung für moderne Friseure",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#FFD700",
+  "orientation": "portrait-primary",
+  "categories": ["business", "lifestyle"],
+  "lang": "de",
+  "dir": "ltr",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDE5MiAxOTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIxOTIiIGhlaWdodD0iMTkyIiByeD0iMjQiIGZpbGw9IiMxMjEyMTIiLz4KPHN2ZyB4PSI0OCIgeT0iNDgiIHdpZHRoPSI5NiIgaGVpZ2h0PSI5NiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiNGRkQ3MDAiIHN0cm9rZS13aWR0aD0iMi4yIj4KICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik04IDJhMiAyIDAgMCAxIDIgMnYxNWMwIDEuMS0uOSAyLTIgMkg2VjJ6bTAgMGgxMGEyIDIgMCAwIDEgMiAydjE1YzAgMS4xLS45IDItMiAySDE4VjJ6Ii8+CiAgPHBhdGggc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBkPSJtOSAxMC0xLTEgMSAxem02IDAtMS0xIDEgMXoiLz4KICA8cGF0aCBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGQ9Ik0xMiAxNnYtMi41YTIuNSAyLjUgMCAwIDEgNSAwdjIuNSIvPgo8L3N2Zz4KPC9zdmc+",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI1MTIiIGhlaWdodD0iNTEyIiByeD0iNjQiIGZpbGw9IiMxMjEyMTIiLz4KPHN2ZyB4PSIxMjgiIHk9IjEyOCIgd2lkdGg9IjI1NiIgaGVpZ2h0PSIyNTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjRkZENzAwIiBzdHJva2Utd2lkdGg9IjEuOCI+CiAgPHBhdGggc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBkPSJNOCAyYTIgMiAwIDAgMSAyIDJ2MTVjMCAxLjEtLjkgMi0yIDJINlYyem0wIDBoMTBhMiAyIDAgMCAxIDIgMnYxNWMwIDEuMS0uOSAyLTIgMkgxOFYyeiIvPgogIDxwYXRoIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIgZD0ibTkgMTAtMS0xIDEgMXptNiAwLTEtMSAxIDF6Ii8+CiAgPHBhdGggc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBkPSJNMTIgMTZ2LTIuNWEyLjUgMi41IDAgMCAxIDUgMHYyLjUiLz4KPC9zdmc+Cjwvc3ZnPg==",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTI4MCIgaGVpZ2h0PSI3MjAiIHZpZXdCb3g9IjAgMCAxMjgwIDcyMCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjEyODAiIGhlaWdodD0iNzIwIiBmaWxsPSIjMTIxMjEyIi8+Cjx0ZXh0IHg9IjY0MCIgeT0iMzYwIiBmaWxsPSIjRkZENzAwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iNDgiIHRleHQtYW5jaG9yPSJtaWRkbGUiPgpTYWxvbk1hbmFnZXIKPC90ZXh0Pgo8L3N2Zz4=",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide",
+      "label": "SalonManager Desktop"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNzUwIiBoZWlnaHQ9IjEzMzQiIHZpZXdCb3g9IjAgMCA3NTAgMTMzNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9Ijc1MCIgaGVpZ2h0PSIxMzM0IiBmaWxsPSIjMTIxMjEyIi8+Cjx0ZXh0IHg9IjM3NSIgeT0iNjY3IiBmaWxsPSIjRkZENzAwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMzYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPgpTYWxvbk1hbmFnZXIKPC90ZXh0Pgo8L3N2Zz4=",
+      "sizes": "750x1334",
+      "type": "image/svg+xml",
+      "form_factor": "narrow",
+      "label": "SalonManager Mobile"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Termin buchen",
+      "short_name": "Buchen",
+      "description": "Schnell einen neuen Termin buchen",
+      "url": "/?action=book",
+      "icons": [
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNCIgZmlsbD0iI0ZGRDcwMCIvPgo8cGF0aCBkPSJNMTIgOVY3TTEyIDlWMTFNMTIgOUgxNE0xMiA5SDEwIiBzdHJva2U9IiMxMjEyMTIiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+Cjwvc3ZnPg==",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Meine Termine",
+      "short_name": "Termine",
+      "description": "Übersicht meiner Termine",
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iOTYiIGhlaWdodD0iOTYiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNCIgZmlsbD0iI0ZGRDcwMCIvPgo8cGF0aCBkPSJNOCA3VjNNMTYgN1YzTTcgMTFIMTdNNSAyMUgxOUEyIDIgMCAwIDAgMjEgMTlWN0EyIDIgMCAwIDAgMTkgNUg1QTIgMiAwIDAgMCAzIDdWMTlBMiAyIDAgMCAwIDUgMjFaIiBzdHJva2U9IiMxMjEyMTIiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+Cjwvc3ZnPg==",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false,
+  "scope": "/",
+  "id": "salonmanager-pwa"
+}
