@@ -14,7 +14,7 @@ export default function NavigationHeader() {
     window.location.href = "/api/logout";
   };
 
-  const getInitials = (firstName?: string, lastName?: string) => {
+  const getInitials = (firstName?: string | null, lastName?: string | null) => {
     if (!firstName && !lastName) return "U";
     return `${firstName?.[0] || ""}${lastName?.[0] || ""}`;
   };
