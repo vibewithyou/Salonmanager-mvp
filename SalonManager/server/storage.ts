@@ -22,7 +22,7 @@ import {
   type BookingWithDetails,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte, or, desc, asc } from "drizzle-orm";
+import { eq, and, gte, lte, or, desc, asc, lt, gt, ne } from "drizzle-orm";
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -61,8 +61,18 @@ export interface IStorage {
   createBooking(booking: InsertBooking): Promise<Booking>;
   updateBooking(id: string, booking: Partial<InsertBooking>): Promise<Booking>;
 
+  // Alias methods for tasks
+  listBookingsForUser(userId: string): Promise<BookingWithDetails[]>;
+  listBookingsForSalon(salonId: string): Promise<BookingWithDetails[]>;
+  updateBookingStatus(id: string, status: string): Promise<Booking>;
+
   // Slot operations
-  getAvailableSlots(salonId: string, serviceId: string, date: string, stylistId?: string): Promise<{ time: string; stylistId: string }[]>;
+  findSlots(
+    salonId: string,
+    serviceId: string,
+    date: string,
+    stylistId?: string,
+  ): Promise<{ start: string; end: string; stylistId: string }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -342,6 +352,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBooking(booking: InsertBooking): Promise<Booking> {
+    // overlap check: existing bookings for stylist intersecting time range
+    if (booking.stylistId) {
+      const conflicts = await db
+        .select({ id: bookings.id })
+        .from(bookings)
+        .where(
+          and(
+            eq(bookings.stylistId, booking.stylistId),
+            lt(bookings.startsAt, booking.endsAt),
+            gt(bookings.endsAt, booking.startsAt),
+            ne(bookings.status, "cancelled")
+          )
+        );
+      if (conflicts.length > 0) {
+        throw new Error("OVERLAP");
+      }
+    }
+
     const [newBooking] = await db.insert(bookings).values(booking).returning();
     return newBooking;
   }
@@ -356,17 +384,20 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Slot operations
-  async getAvailableSlots(salonId: string, serviceId: string, date: string, stylistId?: string): Promise<{ time: string; stylistId: string }[]> {
-    // Get service duration
+  async findSlots(
+    salonId: string,
+    serviceId: string,
+    date: string,
+    stylistId?: string,
+  ): Promise<{ start: string; end: string; stylistId: string }[]> {
     const service = await this.getService(serviceId);
     if (!service) return [];
 
-    // Get stylists for the salon
-    const salonStylists = stylistId 
+    const salonStylists = stylistId
       ? [await this.getStylist(stylistId)].filter(Boolean)
       : await this.getStylistsBySalon(salonId);
 
-    const slots: { time: string; stylistId: string }[] = [];
+    const slots: { start: string; end: string; stylistId: string }[] = [];
     const dateObj = new Date(date);
     const weekday = dateObj.getDay();
 
@@ -391,7 +422,7 @@ export class DatabaseStorage implements IStorage {
 
         let currentTime = new Date(startTime);
         while (currentTime < endTime) {
-          const slotEndTime = new Date(currentTime.getTime() + service.durationMin * 60000);
+          const slotEndTime = new Date(currentTime.getTime() + (service.durationMin + 5) * 60000);
           if (slotEndTime <= endTime) {
             // Check for conflicts with existing bookings
             const conflictingBookings = await db
@@ -399,8 +430,8 @@ export class DatabaseStorage implements IStorage {
               .from(bookings)
               .where(and(
                 eq(bookings.stylistId, stylist.id),
-                gte(bookings.startsAt, currentTime),
-                lte(bookings.startsAt, slotEndTime),
+                lt(bookings.startsAt, slotEndTime),
+                gt(bookings.endsAt, currentTime),
                 or(
                   eq(bookings.status, "confirmed"),
                   eq(bookings.status, "requested")
@@ -409,7 +440,8 @@ export class DatabaseStorage implements IStorage {
 
             if (conflictingBookings.length === 0) {
               slots.push({
-                time: currentTime.toTimeString().slice(0, 5),
+                start: currentTime.toISOString(),
+                end: slotEndTime.toISOString(),
                 stylistId: stylist.id,
               });
             }
@@ -418,8 +450,30 @@ export class DatabaseStorage implements IStorage {
         }
       }
     }
+    return slots.sort((a, b) => a.start.localeCompare(b.start));
+  }
 
-    return slots.sort((a, b) => a.time.localeCompare(b.time));
+  // compatibility alias for previous name
+  async getAvailableSlots(
+    salonId: string,
+    serviceId: string,
+    date: string,
+    stylistId?: string,
+  ) {
+    return this.findSlots(salonId, serviceId, date, stylistId);
+  }
+
+  // alias helpers matching handover task names
+  async listBookingsForUser(userId: string) {
+    return this.getBookingsByUser(userId);
+  }
+
+  async listBookingsForSalon(salonId: string) {
+    return this.getBookingsBySalon(salonId);
+  }
+
+  async updateBookingStatus(id: string, status: string) {
+    return this.updateBooking(id, { status } as Partial<InsertBooking>);
   }
 }
 
