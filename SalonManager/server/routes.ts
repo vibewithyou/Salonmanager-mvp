@@ -10,87 +10,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   await setupAuth(app);
 
   // Seed data - run this once to populate the database
-  app.post('/api/v1/seed', async (req, res) => {
+  app.post('/api/v1/seed', async (_req, res) => {
     try {
-      // Create demo salons
-      const salonsData = [
-        {
-          name: "BARBERs Freiberg",
-          slug: "barbers-freiberg",
-          address: "09599 Freiberg, DE",
-          lat: "50.9159",
-          lng: "13.3422",
-          phone: "+49 3731 123456",
-          email: "barbers@salonmanager.app",
-          openHoursJson: {
-            monday: { start: "09:00", end: "18:00" },
-            tuesday: { start: "09:00", end: "18:00" },
-            wednesday: { start: "09:00", end: "18:00" },
-            thursday: { start: "09:00", end: "18:00" },
-            friday: { start: "09:00", end: "18:00" },
-            saturday: { start: "10:00", end: "14:00" },
-            sunday: null
-          }
-        },
-        {
-          name: "Haarschneiderei Freiberg",
-          slug: "haarschneiderei-freiberg",
-          address: "09599 Freiberg, DE",
-          lat: "50.9166",
-          lng: "13.3440",
-          phone: "+49 3731 654321",
-          email: "haarschneiderei@salonmanager.app",
-          openHoursJson: {
-            monday: { start: "09:00", end: "18:00" },
-            tuesday: { start: "09:00", end: "18:00" },
-            wednesday: { start: "09:00", end: "18:00" },
-            thursday: { start: "09:00", end: "18:00" },
-            friday: { start: "09:00", end: "18:00" },
-            saturday: { start: "10:00", end: "14:00" },
-            sunday: null
-          }
-        },
-        {
-          name: "Klier Freiberg",
-          slug: "klier-freiberg",
-          address: "09599 Freiberg, DE",
-          lat: "50.9149",
-          lng: "13.3407",
-          phone: "+49 3731 987654",
-          email: "klier@salonmanager.app",
-          openHoursJson: {
-            monday: { start: "09:00", end: "18:00" },
-            tuesday: { start: "09:00", end: "18:00" },
-            wednesday: { start: "09:00", end: "18:00" },
-            thursday: { start: "09:00", end: "18:00" },
-            friday: { start: "09:00", end: "18:00" },
-            saturday: { start: "10:00", end: "14:00" },
-            sunday: null
-          }
-        }
-      ];
-
-      const createdSalons = [];
-      for (const salonData of salonsData) {
-        const salon = await storage.createSalon(salonData);
-        createdSalons.push(salon);
-
-        // Create services for each salon
-        const servicesData = [
-          { salonId: salon.id, title: "Herrenhaarschnitt", durationMin: 60, priceCents: 6000 },
-          { salonId: salon.id, title: "Damenschnitt", durationMin: 60, priceCents: 6000 },
-          { salonId: salon.id, title: "Färben", durationMin: 60, priceCents: 6000 }
-        ];
-
-        for (const serviceData of servicesData) {
-          await storage.createService(serviceData);
-        }
-      }
-
-      res.json({ message: "Seed data created successfully", salons: createdSalons });
+      await storage.seedDemo();
+      res.json({ message: 'Seed data created successfully' });
     } catch (error) {
-      console.error("Error seeding data:", error);
-      res.status(500).json({ message: "Failed to seed data" });
+      console.error('Error seeding data:', error);
+      res.status(500).json({ message: 'Failed to seed data' });
     }
   });
 

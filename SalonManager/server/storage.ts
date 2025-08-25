@@ -383,6 +383,83 @@ export class DatabaseStorage implements IStorage {
     return updatedBooking;
   }
 
+  async seedDemo() {
+    const salonsData = [
+      {
+        name: "BARBERs Freiberg",
+        slug: "barbers-freiberg",
+        address: "09599 Freiberg, DE",
+        lat: "50.9159",
+        lng: "13.3422",
+        phone: "+49 3731 123456",
+        email: "barbers@salonmanager.app",
+        openHoursJson: {
+          monday: { start: "09:00", end: "18:00" },
+          tuesday: { start: "09:00", end: "18:00" },
+          wednesday: { start: "09:00", end: "18:00" },
+          thursday: { start: "09:00", end: "18:00" },
+          friday: { start: "09:00", end: "18:00" },
+          saturday: { start: "10:00", end: "14:00" },
+          sunday: null,
+        },
+      },
+      {
+        name: "Haarschneiderei Freiberg",
+        slug: "haarschneiderei-freiberg",
+        address: "09599 Freiberg, DE",
+        lat: "50.9166",
+        lng: "13.3440",
+        phone: "+49 3731 654321",
+        email: "haarschneiderei@salonmanager.app",
+        openHoursJson: {
+          monday: { start: "09:00", end: "18:00" },
+          tuesday: { start: "09:00", end: "18:00" },
+          wednesday: { start: "09:00", end: "18:00" },
+          thursday: { start: "09:00", end: "18:00" },
+          friday: { start: "09:00", end: "18:00" },
+          saturday: { start: "10:00", end: "14:00" },
+          sunday: null,
+        },
+      },
+      {
+        name: "Klier Freiberg",
+        slug: "klier-freiberg",
+        address: "09599 Freiberg, DE",
+        lat: "50.9149",
+        lng: "13.3407",
+        phone: "+49 3731 987654",
+        email: "klier@salonmanager.app",
+        openHoursJson: {
+          monday: { start: "09:00", end: "18:00" },
+          tuesday: { start: "09:00", end: "18:00" },
+          wednesday: { start: "09:00", end: "18:00" },
+          thursday: { start: "09:00", end: "18:00" },
+          friday: { start: "09:00", end: "18:00" },
+          saturday: { start: "10:00", end: "14:00" },
+          sunday: null,
+        },
+      },
+    ];
+
+    for (const salonData of salonsData) {
+      await db.insert(salons).values(salonData).onConflictDoNothing();
+      const [salon] = await db
+        .select()
+        .from(salons)
+        .where(eq(salons.slug, salonData.slug));
+
+      const servicesData = [
+        { salonId: salon.id, title: "Herrenhaarschnitt", durationMin: 60, priceCents: 6000 },
+        { salonId: salon.id, title: "Damenschnitt", durationMin: 60, priceCents: 6000 },
+        { salonId: salon.id, title: "Färben", durationMin: 60, priceCents: 6000 },
+      ];
+
+      for (const serviceData of servicesData) {
+        await db.insert(services).values(serviceData).onConflictDoNothing();
+      }
+    }
+  }
+
   // Slot operations
   async findSlots(
     salonId: string,
