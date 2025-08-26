@@ -1561,3 +1561,177 @@ export async function deleteWorkHour(salonId: number, id: number) {
 }
 
 
+
+// ---- Absences CRUD ----
+export type AbsenceInput = {
+  stylist_id: number;
+  starts_at: string;
+  ends_at: string;
+  reason?: string | null;
+};
+
+function parseISOdt(v: string): Date {
+  const d = new Date(v);
+  if (isNaN(d.getTime())) throw new Error('invalid');
+  return d;
+}
+
+async function stylistInSalon(stylistId: number, salonId: number) {
+  const st = await db.query.stylists.findFirst({
+    where: (t, { and, eq }) => and(eq(t.id, String(stylistId)), eq(t.salonId, String(salonId))),
+  });
+  return !!st;
+}
+
+function validateAbsenceBase(input: Partial<AbsenceInput>) {
+  const errors: Record<string, string[]> = {};
+  if (!Number.isFinite(Number(input.stylist_id))) (errors.stylist_id ??= []).push('required');
+  if (typeof input.starts_at !== 'string') (errors.starts_at ??= []).push('required ISO string');
+  if (typeof input.ends_at !== 'string') (errors.ends_at ??= []).push('required ISO string');
+  if (input.reason != null) {
+    if (typeof input.reason !== 'string') (errors.reason ??= []).push('must be string');
+    else if (input.reason.length > 200) (errors.reason ??= []).push('max 200 chars');
+  }
+  if (!errors.starts_at && !errors.ends_at) {
+    try {
+      const s = parseISOdt(input.starts_at!);
+      const e = parseISOdt(input.ends_at!);
+      if (s.getTime() >= e.getTime()) (errors.starts_at ??= []).push('must be < ends_at');
+    } catch {
+      (errors.starts_at ??= []).push('invalid ISO');
+    }
+  }
+  return errors;
+}
+
+async function overlapsAbsence(params: { salonId: number; stylistId: number; starts: Date; ends: Date; ignoreId?: number }) {
+  const rows = await db.query.absences.findMany({
+    where: (a, { and, eq, ne, lte, gte }) =>
+      and(
+        eq(a.salonId, String(params.salonId)),
+        eq(a.stylistId, String(params.stylistId)),
+        lte(a.startsAt, params.ends),
+        gte(a.endsAt, params.starts),
+        params.ignoreId ? ne(a.id, String(params.ignoreId)) : eq(a.id, a.id)
+      ),
+  });
+  return rows.some(r => new Date(r.startsAt) < params.ends && params.starts < new Date(r.endsAt));
+}
+
+export async function listAbsences(salonId: number, stylistId: number) {
+  const rows = await db.query.absences.findMany({
+    where: (a, { and, eq }) => and(eq(a.salonId, String(salonId)), eq(a.stylistId, String(stylistId))),
+    orderBy: (a, { asc }) => [asc(a.startsAt)],
+  });
+  return rows.map(r => ({
+    id: Number(r.id),
+    salon_id: Number(r.salonId),
+    stylist_id: Number(r.stylistId),
+    starts_at: new Date(r.startsAt).toISOString(),
+    ends_at: new Date(r.endsAt).toISOString(),
+    reason: r.reason ?? null,
+  }));
+}
+
+export async function createAbsence(salonId: number, input: AbsenceInput) {
+  const baseErr = validateAbsenceBase(input);
+  if (Object.keys(baseErr).length) return { ok: false, status: 422, errors: baseErr };
+
+  if (!(await stylistInSalon(input.stylist_id, salonId))) {
+    return { ok: false, status: 422, errors: { stylist_id: ['not in salon'] } };
+  }
+
+  const s = parseISOdt(input.starts_at);
+  const e = parseISOdt(input.ends_at);
+
+  if (await overlapsAbsence({ salonId, stylistId: input.stylist_id, starts: s, ends: e })) {
+    return { ok: false, status: 422, errors: { starts_at: ['overlaps existing absence'] } };
+  }
+
+  const inserted = await db
+    .insert(absences)
+    .values({
+      salonId: String(salonId),
+      stylistId: String(input.stylist_id),
+      startsAt: s,
+      endsAt: e,
+      reason: input.reason?.trim() || null,
+    })
+    .returning();
+
+  const r = inserted[0];
+  return {
+    ok: true,
+    data: {
+      id: Number(r.id),
+      salon_id: Number(r.salonId),
+      stylist_id: Number(r.stylistId),
+      starts_at: new Date(r.startsAt).toISOString(),
+      ends_at: new Date(r.endsAt).toISOString(),
+      reason: r.reason ?? null,
+    },
+  };
+}
+
+export async function updateAbsence(salonId: number, id: number, patch: Partial<AbsenceInput>) {
+  const existing = await db.query.absences.findFirst({
+    where: (a, { and, eq }) => and(eq(a.id, String(id)), eq(a.salonId, String(salonId))),
+  });
+  if (!existing) return { ok: false, status: 404, errors: { id: ['not found in salon'] } };
+
+  const next: AbsenceInput = {
+    stylist_id: patch.stylist_id ?? Number(existing.stylistId),
+    starts_at: patch.starts_at ?? new Date(existing.startsAt).toISOString(),
+    ends_at: patch.ends_at ?? new Date(existing.endsAt).toISOString(),
+    reason: patch.reason != null ? patch.reason : existing.reason ?? null,
+  };
+
+  const baseErr = validateAbsenceBase(next);
+  if (Object.keys(baseErr).length) return { ok: false, status: 422, errors: baseErr };
+
+  if (!(await stylistInSalon(next.stylist_id, salonId))) {
+    return { ok: false, status: 422, errors: { stylist_id: ['not in salon'] } };
+  }
+
+  const s = parseISOdt(next.starts_at);
+  const e = parseISOdt(next.ends_at);
+
+  if (await overlapsAbsence({ salonId, stylistId: next.stylist_id, starts: s, ends: e, ignoreId: id })) {
+    return { ok: false, status: 422, errors: { starts_at: ['overlaps existing absence'] } };
+  }
+
+  const updated = await db
+    .update(absences)
+    .set({
+      stylistId: String(next.stylist_id),
+      startsAt: s,
+      endsAt: e,
+      reason: next.reason?.trim() || null,
+    })
+    .where(eq(absences.id, String(id)))
+    .returning();
+
+  const r = updated[0];
+  return {
+    ok: true,
+    data: {
+      id: Number(r.id),
+      salon_id: Number(r.salonId),
+      stylist_id: Number(r.stylistId),
+      starts_at: new Date(r.startsAt).toISOString(),
+      ends_at: new Date(r.endsAt).toISOString(),
+      reason: r.reason ?? null,
+    },
+  };
+}
+
+export async function deleteAbsence(salonId: number, id: number) {
+  const existing = await db.query.absences.findFirst({
+    where: (a, { and, eq }) => and(eq(a.id, String(id)), eq(a.salonId, String(salonId))),
+  });
+  if (!existing) return { ok: false, status: 404, errors: { id: ['not found in salon'] } };
+
+  await db.delete(absences).where(eq(absences.id, String(id)));
+  return { ok: true };
+}
+

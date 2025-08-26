@@ -318,6 +318,75 @@ export function useWorkHours(salonId: number, stylistId: number) {
   });
 }
 
+// ---- Absences ----
+export type AbsenceDto = {
+  id: number;
+  salon_id: number;
+  stylist_id: number;
+  starts_at: string;
+  ends_at: string;
+  reason: string | null;
+};
+
+export function useAbsences(salonId: number, stylistId: number) {
+  return useQuery({
+    queryKey: ['absences', salonId, stylistId],
+    queryFn: async () => {
+      const r = await fetch(`/api/v1/salons/${salonId}/stylists/${stylistId}/absences`, { credentials: 'include' });
+      if (!r.ok) throw new Error(await r.text());
+      return (await r.json()) as AbsenceDto[];
+    },
+    enabled: !!salonId && !!stylistId,
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateAbsence(salonId: number, stylistId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { starts_at: string; ends_at: string; reason?: string | null }) => {
+      const r = await fetch(`/api/v1/salons/${salonId}/stylists/${stylistId}/absences`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return await r.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['absences', salonId, stylistId] }),
+  });
+}
+
+export function useUpdateAbsence(salonId: number, stylistId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: number; starts_at?: string; ends_at?: string; reason?: string | null }) => {
+      const r = await fetch(`/api/v1/absences/${input.id}?salon_id=${salonId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ starts_at: input.starts_at, ends_at: input.ends_at, reason: input.reason }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return await r.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['absences', salonId, stylistId] }),
+  });
+}
+
+export function useDeleteAbsence(salonId: number, stylistId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const r = await fetch(`/api/v1/absences/${id}?salon_id=${salonId}`, { method: 'DELETE', credentials: 'include' });
+      if (!r.ok) throw new Error(await r.text());
+      return await r.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['absences', salonId, stylistId] }),
+  });
+}
+
 export function useCreateWorkHour(salonId: number, stylistId: number) {
   const qc = useQueryClient();
   return useMutation({
