@@ -34,7 +34,8 @@ export default function Landing() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 onClick={() => navigate('/salons')}
-                className="bg-gold-500 hover:bg-gold-600 text-dark-900 px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all"
+                aria-label="Salons entdecken"
+                className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all"
                 data-testid="button-explore-salons"
               >
                 Salons entdecken
@@ -42,7 +43,8 @@ export default function Landing() {
               <Button
                 variant="outline"
                 onClick={() => navigate('/about')}
-                className="border-2 border-gold-500 text-gold-500 hover:bg-gold-500 hover:text-dark-900 px-8 py-4 text-lg font-semibold"
+                aria-label="Mehr erfahren"
+                className="border border-[var(--foreground)] text-[var(--foreground)] hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)] px-8 py-4 text-lg font-semibold"
                 data-testid="button-learn-more"
               >
                 Mehr erfahren
