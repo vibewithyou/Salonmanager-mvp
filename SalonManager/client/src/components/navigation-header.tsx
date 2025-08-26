@@ -101,7 +101,7 @@ export default function NavigationHeader() {
                   <button
                     onClick={() => navigate('/profile')}
                     aria-label="Profil öffnen"
-                    className="w-8 h-8 bg-[var(--primary)] text-black rounded-full flex items-center justify-center hover:opacity-90 transition-colors"
+                    className="w-8 h-8 bg-[var(--primary)] text-black rounded-full flex items-center justify-center hover:opacity-90 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                     data-testid="button-profile-icon"
                   >
                     <span className="font-semibold text-sm" data-testid="text-user-initials">
