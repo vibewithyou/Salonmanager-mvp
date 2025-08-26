@@ -13,10 +13,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/v1/seed', async (_req, res) => {
     try {
       await storage.seedDemo();
-      res.json({ message: 'Seed data created successfully' });
+      res.json({ ok: true });
     } catch (error) {
       console.error('Error seeding data:', error);
-      res.status(500).json({ message: 'Failed to seed data' });
+      res.status(500).json({ ok: false, message: 'Failed to seed data' });
     }
   });
 
