@@ -111,7 +111,7 @@ export default function Home() {
         {/* Map or List View */}
         {viewMode === 'map' ? (
           <div className="animate-fade-in">
-            <SalonMap salons={salons} onBookNow={handleBookNow} />
+            <SalonMap />
           </div>
         ) : (
           <div className="animate-fade-in">

@@ -1,95 +1,70 @@
-import { useEffect, useRef } from 'react';
-import { Button } from "@/components/ui/button";
-import type { Salon } from "@shared/schema";
+import { MapContainer, TileLayer, Marker, Tooltip } from 'react-leaflet';
+import L from 'leaflet';
+import { useMemo } from 'react';
+import { useSalons } from '../hooks/useApi';
 
-// Leaflet types
-declare global {
-  interface Window {
-    L: any;
-  }
+const FREIBERG: [number, number] = [50.9159, 13.3422];
+
+function goldMarker(label: string) {
+  return L.divIcon({
+    className: 'sm-marker',
+    html: `
+      <div style="
+        width:28px;height:28px;border-radius:50%;
+        background:#FFD700;border:2px solid #000;
+        display:flex;align-items:center;justify-content:center;
+        font-weight:700;font-size:12px;color:#000;
+      ">${label}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 28],
+    tooltipAnchor: [0, -28],
+  });
 }
 
-interface SalonMapProps {
-  salons: Salon[];
-  onBookNow: (salon: Salon) => void;
-}
+export default function SalonMap() {
+  const { data, isLoading, isError, error } = useSalons();
 
-export default function SalonMap({ salons, onBookNow }: SalonMapProps) {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
+  if (isLoading) return <div className="p-4">Karte lädt…</div>;
+  if (isError)
+    return (
+      <div className="p-4 text-red-500">Fehler: {(error as Error).message}</div>
+    );
+  if (!data || data.length === 0)
+    return <div className="p-4">Keine Salons vorhanden.</div>;
 
-  useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) return;
-
-    // Load Leaflet dynamically
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.onload = () => {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-      document.head.appendChild(link);
-
-      // Initialize map
-      const L = window.L;
-      const map = L.map(mapRef.current).setView([50.9159, 13.3422], 14);
-      mapInstanceRef.current = map;
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors'
-      }).addTo(map);
-
-      // Add salon markers
-      salons.forEach((salon) => {
-        const marker = L.marker([parseFloat(salon.lat), parseFloat(salon.lng)]).addTo(map);
-        
-        const popupContent = `
-          <div class="p-3 min-w-[200px]">
-            <h3 class="font-semibold text-lg mb-2 text-[var(--on-surface)]">${salon.name}</h3>
-            <p class="text-sm text-[var(--on-surface)]/70 mb-3">${salon.address}</p>
-            <button
-              class="w-full bg-[var(--primary)] hover:opacity-90 text-black px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
-              onclick="window.dispatchEvent(new CustomEvent('salon-book', { detail: '${salon.id}' }))"
-            >
-              Termin buchen
-            </button>
-          </div>
-        `;
-        
-        marker.bindPopup(popupContent);
-      });
-
-      // Listen for booking events from popups
-      const handleBookingEvent = (event: any) => {
-        const salonId = event.detail;
-        const salon = salons.find(s => s.id === salonId);
-        if (salon) {
-          onBookNow(salon);
-        }
-      };
-
-      window.addEventListener('salon-book', handleBookingEvent);
-
-      return () => {
-        window.removeEventListener('salon-book', handleBookingEvent);
-      };
-    };
-
-    document.head.appendChild(script);
-
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, [salons, onBookNow]);
+  const center = useMemo<[number, number]>(() => {
+    const first = data.find((s) => s.lat && s.lng);
+    return first ? [first.lat as number, first.lng as number] : FREIBERG;
+  }, [data]);
 
   return (
-    <div 
-      ref={mapRef} 
-      className="w-full h-96 rounded-xl shadow-lg mb-8 bg-[var(--surface)]"
-      data-testid="salon-map"
-    />
+    <div className="rounded-lg border border-[var(--border)] overflow-hidden">
+      <MapContainer
+        center={center}
+        zoom={13}
+        style={{ height: 420, width: '100%' }}
+        scrollWheelZoom={false}
+      >
+        <TileLayer
+          attribution="&copy; OpenStreetMap"
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+
+        {data.map((s, i) => {
+          if (s.lat == null || s.lng == null) return null;
+          const icon = goldMarker(String(i + 1));
+          return (
+            <Marker key={s.id} position={[s.lat, s.lng]} icon={icon}>
+              <Tooltip direction="top" offset={[0, -20]} opacity={1} permanent={false}>
+                <div className="text-[13px]">
+                  <div className="font-semibold">{s.name}</div>
+                  {s.address && <div className="opacity-80">{s.address}</div>}
+                </div>
+              </Tooltip>
+            </Marker>
+          );
+        })}
+      </MapContainer>
+    </div>
   );
 }

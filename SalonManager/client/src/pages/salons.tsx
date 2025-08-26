@@ -1,5 +1,6 @@
 import SalonCard from '../components/salon-card';
 import { useSalons } from '../hooks/useApi';
+import SalonMap from '../components/salon-map';
 
 export default function SalonsPage() {
   const { data, isLoading, isError, error, refetch } = useSalons();
@@ -40,6 +41,9 @@ export default function SalonsPage() {
           />
         ))}
       </div>
+
+      <h2 className="text-xl font-semibold mt-10 mb-3">Karte</h2>
+      <SalonMap />
     </section>
   );
 }
