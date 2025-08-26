@@ -22,6 +22,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, gte, lte, or, desc, asc, lt, gt, ne, inArray } from "drizzle-orm";
+import { sendMail, tplNewBookingToSalon, tplBookingStatusToCustomer } from "./mailer";
 
 const TZ = "Europe/Berlin";
 const SLOT_STEP_MIN = 15;
@@ -816,17 +817,49 @@ export class DatabaseStorage implements IStorage {
     } as any).returning();
 
     const b = inserted[0];
-    return { ok: true, booking: {
-      booking_id: b.id,
-      salon_id: b.salonId,
-      service_id: b.serviceId,
-      stylist_id: b.stylistId,
-      customer_id: b.customerId,
-      starts_at: b.startsAt,
-      ends_at: b.endsAt,
-      status: b.status,
-      note: b.note,
-    }};
+    try {
+      const salon = await db.query.salons.findFirst({ where: (s, { eq }) => eq(s.id, String(salonId)) });
+      const priceEUR = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format((svc.priceCents ?? 0) / 100);
+      const date = new Date(startsAt).toLocaleDateString('de-DE');
+      const time = new Date(startsAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+      let stylistName: string | null = null;
+      if (chosenStylistId) {
+        const st = await db.query.stylists.findFirst({ where: (t, { eq }) => eq(t.id, chosenStylistId!) });
+        stylistName = st?.displayName ?? null;
+      }
+      const manageUrl = process.env.APP_PUBLIC_URL ? `${process.env.APP_PUBLIC_URL}/admin/today?s=${salonId}` : undefined;
+      if (salon?.email) {
+        const { html, text } = tplNewBookingToSalon({
+          salonName: salon.name,
+          serviceTitle: svc.title,
+          priceEUR,
+          date,
+          time,
+          stylist: stylistName,
+          note: note ?? undefined,
+          manageUrl,
+        });
+        await sendMail({ to: salon.email, subject: `Neue Buchung – ${salon.name}`, html, text });
+      } else {
+        console.warn('[mailer] salon has no email; skipping');
+      }
+    } catch (mailErr) {
+      console.warn('[mailer] booking create mail failed:', mailErr);
+    }
+    return {
+      ok: true,
+      booking: {
+        booking_id: b.id,
+        salon_id: b.salonId,
+        service_id: b.serviceId,
+        stylist_id: b.stylistId,
+        customer_id: b.customerId,
+        starts_at: b.startsAt,
+        ends_at: b.endsAt,
+        status: b.status,
+        note: b.note,
+      },
+    };
   }
 
   async updateBooking(id: string, booking: Partial<InsertBooking>): Promise<Booking> {
@@ -1195,6 +1228,30 @@ export async function updateBookingStatus(params: {
     .returning();
 
   const u = updated[0];
+  try {
+    const salon = await db.query.salons.findFirst({ where: (s, { eq }) => eq(s.id, String(b.salonId)) });
+    const service = await db.query.services.findFirst({ where: (s, { eq }) => eq(s.id, String(b.serviceId)) });
+    const customer = b.customerId
+      ? await db.query.users.findFirst({ where: (u, { eq }) => eq(u.id, String(b.customerId)) })
+      : null;
+    const customerEmail = (customer?.email ?? '').trim();
+    if (customerEmail) {
+      const date = new Date(b.startsAt).toLocaleDateString('de-DE');
+      const time = new Date(b.startsAt).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+      const { html, text } = tplBookingStatusToCustomer({
+        status: to as any,
+        serviceTitle: service?.title ?? 'Termin',
+        date,
+        time,
+        salonName: salon?.name ?? 'Ihr Salon',
+      });
+      await sendMail({ to: customerEmail, subject: `Ihr Termin – ${to.toUpperCase()}`, html, text });
+    } else {
+      console.log('[mailer] status mail skipped: no customer email');
+    }
+  } catch (mailErr) {
+    console.warn('[mailer] status mail failed:', mailErr);
+  }
   return {
     ok: true,
     data: {
