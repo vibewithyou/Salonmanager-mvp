@@ -8,7 +8,7 @@ export default function Landing() {
       {/* Hero Section */}
       <section className="relative h-[80vh] flex items-center justify-center text-center">
         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=2048&h=1024')] bg-cover bg-center" />
-        <div className="absolute inset-0 bg-black/60" />
+        <div className="absolute inset-0 bg-[var(--on-surface)]/60" />
 
         <div className="relative z-10 max-w-3xl mx-auto px-4 text-[var(--on-surface)]">
           <h1 className="text-4xl sm:text-5xl font-bold mb-4">

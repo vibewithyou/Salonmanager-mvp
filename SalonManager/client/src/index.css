@@ -9,8 +9,8 @@
   --bg: #F7F7F8;
   --surface: #FFFFFF;
   --on-surface: #1A1B1E;
-  --muted: rgba(0, 0, 0, 0.06);
-  --border: rgba(0, 0, 0, 0.12);
+  --muted: rgba(0,0,0,.06);
+  --border: rgba(0,0,0,.12);
 
   /* Backwards-compat variables for shadcn components */
   --background: var(--bg);
@@ -59,8 +59,8 @@
   --bg: #0B0C0E;
   --surface: #111318;
   --on-surface: #EDEDED;
-  --muted: rgba(255, 255, 255, 0.06);
-  --border: rgba(255, 255, 255, 0.14);
+  --muted: rgba(255,255,255,.06);
+  --border: rgba(255,255,255,.14);
 
   /* Backwards-compat variables */
   --background: var(--bg);
