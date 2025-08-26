@@ -165,6 +165,18 @@ export type SalonDetail = {
   }>;
 };
 
+export type BookingListItem = {
+  id: number;
+  salon_id: number;
+  service: { id: number; title: string; duration_min: number; price_cents: number };
+  stylist: { id: number; display_name: string | null };
+  customer: { id: number | null; name: string | null };
+  starts_at: string;
+  ends_at: string;
+  status: 'requested' | 'confirmed' | 'declined' | 'cancelled';
+  note: string | null;
+};
+
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
@@ -211,6 +223,17 @@ export interface IStorage {
     | { ok: false; status: number; error: Record<string, string[]> }
   >;
   updateBooking(id: string, booking: Partial<InsertBooking>): Promise<Booking>;
+
+  listBookings(params: {
+    scope: 'me' | 'salon';
+    salonId?: number;
+    customerId?: number | null;
+    fromISO?: string;
+    toISO?: string;
+    status?: 'requested' | 'confirmed' | 'declined' | 'cancelled';
+    limit?: number;
+    offset?: number;
+  }): Promise<BookingListItem[]>;
 
   // Alias methods for tasks
   listBookingsForUser(userId: string): Promise<BookingWithDetails[]>;
@@ -572,6 +595,101 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(salons, eq(bookings.salonId, salons.id))
       .where(eq(bookings.id, id)) as BookingWithDetails[];
     return booking;
+  }
+
+  async listBookings(params: {
+    scope: 'me' | 'salon';
+    salonId?: number;
+    customerId?: number | null;
+    fromISO?: string;
+    toISO?: string;
+    status?: 'requested' | 'confirmed' | 'declined' | 'cancelled';
+    limit?: number;
+    offset?: number;
+  }): Promise<BookingListItem[]> {
+    const {
+      scope,
+      salonId,
+      customerId,
+      fromISO,
+      toISO,
+      status,
+      limit = 50,
+      offset = 0,
+    } = params;
+
+    const today = new Date();
+    const defaultFrom = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const defaultTo = new Date(defaultFrom.getTime() + 30 * 24 * 60 * 60 * 1000);
+    const from = fromISO ? new Date(`${fromISO}T00:00:00`) : defaultFrom;
+    const to = toISO ? new Date(`${toISO}T23:59:59`) : defaultTo;
+
+    if (scope === 'me') {
+      if (!customerId) return [];
+    } else if (scope === 'salon') {
+      if (!salonId) return [];
+    }
+
+    const conditions: any[] = [
+      scope === 'me'
+        ? eq(bookings.customerId, String(customerId))
+        : eq(bookings.salonId, String(salonId)),
+      gte(bookings.startsAt, from),
+      lte(bookings.startsAt, to),
+    ];
+    if (status) conditions.push(eq(bookings.status, status));
+
+    const rows = await db
+      .select({
+        id: bookings.id,
+        salonId: bookings.salonId,
+        serviceId: bookings.serviceId,
+        serviceTitle: services.title,
+        serviceDuration: services.durationMin,
+        servicePrice: services.priceCents,
+        stylistId: bookings.stylistId,
+        stylistName: stylists.displayName,
+        customerId: bookings.customerId,
+        customerFirst: users.firstName,
+        customerLast: users.lastName,
+        startsAt: bookings.startsAt,
+        endsAt: bookings.endsAt,
+        status: bookings.status,
+        note: bookings.note,
+      })
+      .from(bookings)
+      .innerJoin(services, eq(bookings.serviceId, services.id))
+      .innerJoin(stylists, eq(bookings.stylistId, stylists.id))
+      .leftJoin(users, eq(bookings.customerId, users.id))
+      .where(and(...conditions))
+      .orderBy(asc(bookings.startsAt))
+      .limit(limit)
+      .offset(offset);
+
+    return rows.map((r) => ({
+      id: Number(r.id),
+      salon_id: Number(r.salonId),
+      service: {
+        id: Number(r.serviceId),
+        title: r.serviceTitle,
+        duration_min: r.serviceDuration,
+        price_cents: r.servicePrice,
+      },
+      stylist: { id: Number(r.stylistId), display_name: r.stylistName },
+      customer: {
+        id: r.customerId ? Number(r.customerId) : null,
+        name:
+          r.customerFirst || r.customerLast
+            ? `${r.customerFirst ?? ''} ${r.customerLast ?? ''}`.trim()
+            : r.customerId
+            ? null
+            : 'Gast',
+      },
+      starts_at: r.startsAt.toISOString(),
+      ends_at: r.endsAt.toISOString(),
+      status: r.status,
+      note: r.note ?? null,
+    }));
   }
 
   async createBooking(params: {

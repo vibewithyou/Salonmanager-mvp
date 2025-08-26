@@ -23,7 +23,15 @@
    curl http://localhost:5000/api/v1/salons | jq
    ```
    Expect an array of salons.
-5. Open `http://localhost:5000` in your browser.
+5. Query bookings for a salon (after creating one):
+   ```bash
+   curl "http://localhost:5000/api/v1/bookings?scope=salon&salon_id=1&from=2025-08-01&to=2025-08-31" | jq
+   ```
+   Fetch your bookings (guest returns empty):
+   ```bash
+   curl "http://localhost:5000/api/v1/bookings?scope=me" | jq
+   ```
+6. Open `http://localhost:5000` in your browser.
 
 ### .env example
 

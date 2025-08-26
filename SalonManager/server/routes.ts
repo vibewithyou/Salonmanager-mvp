@@ -141,28 +141,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (err) { next(err); }
   });
 
-  app.get('/api/v1/bookings', isAuthenticated, async (req: any, res) => {
+  app.get('/api/v1/bookings', async (req, res, next) => {
     try {
-      const { scope, salon_id } = req.query;
-      const userId = req.user.claims.sub;
-
-      if (scope === 'me') {
-        const bookings = await storage.listBookingsForUser(userId);
-        return res.json(bookings);
+      const scope = (String(req.query.scope || '') as 'me' | 'salon');
+      if (!['me', 'salon'].includes(scope)) {
+        return res.status(400).json({ message: 'Bad request: scope=me|salon required' });
       }
 
-      if (scope === 'salon') {
-        if (!salon_id) {
-          return res.status(400).json({ message: 'salon_id required' });
-        }
-        const bookings = await storage.listBookingsForSalon(salon_id as string);
-        return res.json(bookings);
+      const salonId = req.query.salon_id ? Number(req.query.salon_id) : undefined;
+      const fromISO = req.query.from ? String(req.query.from) : undefined;
+      const toISO = req.query.to ? String(req.query.to) : undefined;
+      const status = req.query.status as any;
+      const limit = req.query.limit ? Math.min(100, Math.max(1, Number(req.query.limit))) : 50;
+      const offset = req.query.offset ? Math.max(0, Number(req.query.offset)) : 0;
+
+      if (status && !['requested', 'confirmed', 'declined', 'cancelled'].includes(status)) {
+        return res.status(400).json({ message: 'Bad request: invalid status' });
+      }
+      const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+      if ((fromISO && !dateRe.test(fromISO)) || (toISO && !dateRe.test(toISO))) {
+        return res.status(400).json({ message: 'Bad request: from/to must be YYYY-MM-DD' });
+      }
+      if (scope === 'salon' && !Number.isFinite(salonId)) {
+        return res.status(400).json({ message: 'Bad request: salon_id is required for scope=salon' });
       }
 
-      return res.status(400).json({ message: 'Invalid scope' });
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
-      res.status(500).json({ message: 'Failed to fetch bookings' });
+      const customerId: number | null = null;
+
+      const data = await storage.listBookings({
+        scope,
+        salonId,
+        customerId,
+        fromISO,
+        toISO,
+        status,
+        limit,
+        offset,
+      });
+
+      res.json(data);
+    } catch (err) {
+      next(err);
     }
   });
 
