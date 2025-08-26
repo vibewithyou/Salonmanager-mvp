@@ -11,6 +11,7 @@ import SalonDetail from "@/pages/salon-detail";
 import SalonBooking from "@/pages/salon-booking";
 import Profile from "@/pages/profile";
 import MyBookings from "@/pages/my-bookings";
+import AdminTodayPage from "@/pages/admin-today";
 
 export default function App() {
   return (
@@ -26,6 +27,7 @@ export default function App() {
             <Route path="/salon/:id/book" component={SalonBooking} />
             <Route path="/profile" component={Profile} />
             <Route path="/me/bookings" component={MyBookings} />
+            <Route path="/admin/today" component={AdminTodayPage} />
             <Route>{() => <div style={{ padding: 24 }}>404 – Seite nicht gefunden</div>}</Route>
           </Switch>
         </TooltipProvider>

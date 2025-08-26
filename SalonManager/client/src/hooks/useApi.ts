@@ -81,3 +81,27 @@ export function useMyBookings(params?: { from?: string; to?: string; status?: st
     staleTime: 30_000,
   });
 }
+
+export function useSalonBookingsToday(salonId: number) {
+  const tzToday = new Date().toISOString().slice(0, 10);
+  const qs = new URLSearchParams({
+    scope: 'salon',
+    salon_id: String(salonId),
+    from: tzToday,
+    to: tzToday,
+    limit: '200',
+  });
+
+  return useQuery({
+    queryKey: ['bookings', 'salon', 'today', salonId, tzToday],
+    queryFn: async () => {
+      const r = await fetch(`/api/v1/bookings?` + qs.toString(), {
+        credentials: 'include',
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return (await r.json()) as BookingDto[];
+    },
+    refetchInterval: 30_000,
+    staleTime: 15_000,
+  });
+}

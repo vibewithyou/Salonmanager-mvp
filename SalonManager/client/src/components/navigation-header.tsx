@@ -58,18 +58,32 @@ export default function NavigationHeader() {
                   </a>
                 </Link>
                 {(user?.role === 'salon_owner' || user?.role === 'owner') && (
-                  <Link href="/admin">
-                    <a
-                      className={`px-3 py-2 text-sm font-medium transition-colors ${
-                        location === "/admin"
-                          ? "text-[var(--primary)]"
-                          : "text-[var(--on-surface)]/80 hover:text-[var(--primary)]"
-                      }`}
-                      data-testid="nav-admin"
-                    >
-                      Verwaltung
-                    </a>
-                  </Link>
+                  <>
+                    <Link href="/admin">
+                      <a
+                        className={`px-3 py-2 text-sm font-medium transition-colors ${
+                          location === "/admin"
+                            ? "text-[var(--primary)]"
+                            : "text-[var(--on-surface)]/80 hover:text-[var(--primary)]"
+                        }`}
+                        data-testid="nav-admin"
+                      >
+                        Verwaltung
+                      </a>
+                    </Link>
+                    <Link href="/admin/today?s=1">
+                      <a
+                        className={`px-3 py-2 text-sm font-medium transition-colors ${
+                          location.startsWith('/admin/today')
+                            ? 'text-[var(--primary)]'
+                            : 'text-[var(--on-surface)]/80 hover:text-[var(--primary)]'
+                        }`}
+                        data-testid="nav-admin-today"
+                      >
+                        Heute-Board
+                      </a>
+                    </Link>
+                  </>
                 )}
               </nav>
             )}
