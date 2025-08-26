@@ -92,22 +92,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/v1/salons/:id/slots', async (req, res) => {
+  app.get('/api/v1/salons/:id/slots', async (req, res, next) => {
     try {
-      const { service_id, date, stylist_id } = req.query;
-      if (!service_id || !date) {
-        return res.status(400).json({ message: "service_id and date are required" });
+      const salonId = req.params.id;
+      const serviceId = req.query.service_id as string;
+      const stylistId = req.query.stylist_id
+        ? String(req.query.stylist_id)
+        : undefined;
+      const date = req.query.date as string;
+
+      if (!serviceId || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res.status(400).json({
+          message: 'Bad request: need service_id and date=YYYY-MM-DD',
+        });
       }
-      const slots = await storage.findSlots(
-        req.params.id,
-        service_id as string,
-        date as string,
-        stylist_id as string | undefined
-      );
+
+      const slots = await storage.findSlots(salonId, serviceId, date, stylistId);
       res.json(slots);
-    } catch (error) {
-      console.error("Error fetching slots:", error);
-      res.status(500).json({ message: "Failed to fetch slots" });
+    } catch (err) {
+      next(err);
     }
   });
 

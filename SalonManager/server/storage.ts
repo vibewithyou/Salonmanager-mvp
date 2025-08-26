@@ -23,6 +23,76 @@ import {
 import { db } from "./db";
 import { eq, and, gte, lte, or, desc, asc, lt, gt, ne, inArray } from "drizzle-orm";
 
+const TZ = "Europe/Berlin";
+const SLOT_STEP_MIN = 15;
+const BUFFER_MIN = 5;
+
+function offsetForTZ(base: Date, tz: string): string {
+  const f = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz,
+    timeZoneName: "shortOffset",
+  });
+  const m =
+    f
+      .formatToParts(base)
+      .find((p) => p.type === "timeZoneName")?.value ?? "GMT+00:00";
+  const sign = m.includes("-") ? "-" : "+";
+  const [h, mi] = m.split(sign)[1].split(":");
+  return `${sign}${h.padStart(2, "0")}:${mi.padStart(2, "0")}`;
+}
+
+function toZoned(dateISO: string, timeHHmm: string): Date {
+  const [y, m, d] = dateISO.split("-").map(Number);
+  const [hh, mm] = timeHHmm.split(":").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d, hh, mm, 0));
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(dt);
+  const val = (t: string) => parts.find((p) => p.type === t)?.value!;
+  return new Date(
+    `${val("year")}-${val("month")}-${val("day")}T${val("hour")}:${val(
+      "minute"
+    )}:00${offsetForTZ(new Date(), TZ)}`,
+  );
+}
+
+function addMinutes(d: Date, mins: number): Date {
+  return new Date(d.getTime() + mins * 60_000);
+}
+
+function rangesOverlap(
+  aStart: Date,
+  aEnd: Date,
+  bStart: Date,
+  bEnd: Date,
+): boolean {
+  return aStart < bEnd && bStart < aEnd;
+}
+
+function iterateSlots(
+  windowStart: Date,
+  windowEnd: Date,
+  durationMin: number,
+): Array<[Date, Date]> {
+  const endPlus = durationMin + BUFFER_MIN;
+  const slots: Array<[Date, Date]> = [];
+  for (
+    let t = new Date(windowStart);
+    addMinutes(t, endPlus) <= windowEnd;
+    t = addMinutes(t, SLOT_STEP_MIN)
+  ) {
+    const e = addMinutes(t, endPlus);
+    slots.push([new Date(t), e]);
+  }
+  return slots;
+}
+
 export type SalonListItem = {
   id: string;
   name: string;
@@ -573,67 +643,88 @@ export class DatabaseStorage implements IStorage {
     date: string,
     stylistId?: string,
   ): Promise<{ start: string; end: string; stylistId: string }[]> {
-    const service = await this.getService(serviceId);
-    if (!service) return [];
+    const svc = await this.getService(serviceId);
+    if (!svc || !svc.active) return [];
 
-    const salonStylists = stylistId
-      ? [await this.getStylist(stylistId)].filter(Boolean)
+    const stylists = stylistId
+      ? [await this.getStylist(stylistId)].filter(Boolean as any)
       : await this.getStylistsBySalon(salonId);
+    if (stylists.length === 0) return [];
 
-    const slots: { start: string; end: string; stylistId: string }[] = [];
-    const dateObj = new Date(date);
-    const weekday = dateObj.getDay();
+    const weekday = new Date(
+      `${date}T00:00:00${offsetForTZ(new Date(), TZ)}`,
+    ).getDay();
 
-    for (const stylist of salonStylists) {
-      if (!stylist) continue;
+    const wh = await db
+      .select()
+      .from(workHours)
+      .where(
+        and(
+          eq(workHours.salonId, salonId),
+          eq(workHours.weekday, weekday),
+          inArray(workHours.stylistId, stylists.map((s) => s!.id)),
+        ),
+      );
+    if (wh.length === 0) return [];
 
-      // Get work hours for this stylist on this weekday
-      const stylistWorkHours = await db
-        .select()
-        .from(workHours)
-        .where(and(
-          eq(workHours.stylistId, stylist.id),
-          eq(workHours.weekday, weekday)
-        ));
+    const dayStart = toZoned(date, "00:00");
+    const dayEnd = toZoned(date, "23:59");
 
-      if (stylistWorkHours.length === 0) continue;
+    const abs = await db
+      .select()
+      .from(absences)
+      .where(
+        and(
+          eq(absences.salonId, salonId),
+          inArray(absences.stylistId, stylists.map((s) => s!.id)),
+          lte(absences.startsAt, dayEnd),
+          gte(absences.endsAt, dayStart),
+        ),
+      );
 
-      for (const workHour of stylistWorkHours) {
-        // Generate 15-minute slots
-        const startTime = new Date(`${date}T${workHour.startTime}`);
-        const endTime = new Date(`${date}T${workHour.endTime}`);
+    const bks = await db
+      .select()
+      .from(bookings)
+      .where(
+        and(
+          eq(bookings.salonId, salonId),
+          inArray(bookings.stylistId, stylists.map((s) => s!.id)),
+          ne(bookings.status, "cancelled"),
+          lte(bookings.startsAt, dayEnd),
+          gte(bookings.endsAt, dayStart),
+        ),
+      );
 
-        let currentTime = new Date(startTime);
-        while (currentTime < endTime) {
-          const slotEndTime = new Date(currentTime.getTime() + (service.durationMin + 5) * 60000);
-          if (slotEndTime <= endTime) {
-            // Check for conflicts with existing bookings
-            const conflictingBookings = await db
-              .select()
-              .from(bookings)
-              .where(and(
-                eq(bookings.stylistId, stylist.id),
-                lt(bookings.startsAt, slotEndTime),
-                gt(bookings.endsAt, currentTime),
-                or(
-                  eq(bookings.status, "confirmed"),
-                  eq(bookings.status, "requested")
-                )
-              ));
+    const out: { start: string; end: string; stylistId: string }[] = [];
 
-            if (conflictingBookings.length === 0) {
-              slots.push({
-                start: currentTime.toISOString(),
-                end: slotEndTime.toISOString(),
-                stylistId: stylist.id,
-              });
-            }
-          }
-          currentTime = new Date(currentTime.getTime() + 15 * 60000); // 15 minutes
-        }
+    for (const rule of wh) {
+      const stId = rule.stylistId;
+      const winStart = toZoned(date, rule.startTime);
+      const winEnd = toZoned(date, rule.endTime);
+      if (winStart >= winEnd) continue;
+
+      const absFor = abs.filter((a) => a.stylistId === stId);
+      const bookingsFor = bks.filter((b) => b.stylistId === stId);
+
+      for (const [s, e] of iterateSlots(winStart, winEnd, svc.durationMin)) {
+        const blockedByAbs = absFor.some((a) =>
+          rangesOverlap(s, e, new Date(a.startsAt), new Date(a.endsAt)),
+        );
+        if (blockedByAbs) continue;
+
+        const blockedByBooking = bookingsFor.some((b) =>
+          rangesOverlap(s, e, new Date(b.startsAt), new Date(b.endsAt)),
+        );
+        if (blockedByBooking) continue;
+
+        out.push({ start: s.toISOString(), end: e.toISOString(), stylistId: stId });
       }
     }
-    return slots.sort((a, b) => a.start.localeCompare(b.start));
+
+    out.sort(
+      (a, b) => a.start.localeCompare(b.start) || a.stylistId.localeCompare(b.stylistId),
+    );
+    return out;
   }
 
   // compatibility alias for previous name
