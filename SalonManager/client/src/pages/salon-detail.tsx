@@ -1,14 +1,28 @@
 import { useParams, useLocation } from 'wouter';
 import { useSalon } from '../hooks/useApi';
 
+function useTab(): [string, (t: 'info' | 'services' | 'team') => void] {
+  const [, navigate] = useLocation();
+  const search = new URLSearchParams(window.location.search);
+  const tab = (search.get('tab') as 'info' | 'services' | 'team') ?? 'info';
+  const setTab = (t: 'info' | 'services' | 'team') => {
+    const base = window.location.pathname;
+    navigate(`${base}?tab=${t}`);
+  };
+  return [tab, setTab];
+}
+
 function formatPriceCents(cents: number) {
-  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(cents / 100);
+  return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(
+    cents / 100,
+  );
 }
 
 export default function SalonDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { data, isLoading, isError, error, refetch } = useSalon(id!);
+  const [tab, setTab] = useTab();
 
   if (isLoading) return <div className="p-6">Lade Salon…</div>;
   if (isError)
@@ -51,41 +65,97 @@ export default function SalonDetailPage() {
         </div>
       </div>
 
-      {/* Services */}
-      <h2 className="text-xl font-semibold mb-3">Leistungen</h2>
-      {s.services?.length ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {s.services.map((sv) => (
-            <div
-              key={sv.id}
-              className="p-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]"
-            >
-              <div className="font-medium">{sv.title}</div>
-              <div className="text-sm opacity-80 mt-1">Dauer: {sv.duration_min} min</div>
-              <div className="mt-2 font-semibold">{formatPriceCents(sv.price_cents)}</div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="opacity-80">Für diesen Salon sind noch keine Leistungen erfasst.</div>
-      )}
+      {/* Tabs */}
+      <div
+        role="tablist"
+        aria-label="Salon Tabs"
+        className="mb-4 flex gap-2 border-b border-[var(--border)]"
+      >
+        {(['info', 'services', 'team'] as const).map((key) => (
+          <button
+            key={key}
+            role="tab"
+            aria-selected={tab === key}
+            onClick={() => setTab(key)}
+            className={`px-4 py-2 -mb-[1px] border-b-2 ${
+              tab === key
+                ? 'border-[var(--primary)] font-semibold'
+                : 'border-transparent opacity-80 hover:opacity-100'
+            }`}
+          >
+            {key === 'info' ? 'Info' : key === 'services' ? 'Leistungen' : 'Team'}
+          </button>
+        ))}
+      </div>
 
-      {/* Team (Stub – echte Tabs in Prompt 17) */}
-      <h2 className="text-xl font-semibold mt-8 mb-3">Team (Vorschau)</h2>
-      {s.stylists?.length ? (
-        <div className="flex flex-wrap gap-3">
-          {s.stylists.map((st) => (
-            <div
-              key={st.id}
-              className="px-3 py-2 rounded border border-[var(--border)] bg-[var(--surface)]"
-            >
-              {st.display_name}
+      {/* Info Panel */}
+      <div role="tabpanel" hidden={tab !== 'info'}>
+        <h2 className="text-xl font-semibold mb-3">Über den Salon</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+            <div className="font-medium mb-1">Adresse</div>
+            <div className="opacity-80">{s.address ?? '—'}</div>
+          </div>
+          <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+            <div className="font-medium mb-1">Kontakt</div>
+            <div className="opacity-80 text-sm">
+              {s.phone ? `Tel: ${s.phone}` : '—'}
+              <br />
+              {s.email ?? '—'}
             </div>
-          ))}
+          </div>
         </div>
-      ) : (
-        <div className="opacity-80">Keine Stylist:innen hinterlegt.</div>
-      )}
+      </div>
+
+      {/* Services Panel */}
+      <div role="tabpanel" hidden={tab !== 'services'}>
+        <h2 className="text-xl font-semibold mb-3">Leistungen</h2>
+        {s.services?.length ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {s.services.map((sv) => (
+              <div
+                key={sv.id}
+                className="p-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]"
+              >
+                <div className="font-medium">{sv.title}</div>
+                <div className="text-sm opacity-80 mt-1">Dauer: {sv.duration_min} min</div>
+                <div className="mt-2 font-semibold">{formatPriceCents(sv.price_cents)}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="opacity-80">Keine Leistungen erfasst.</div>
+        )}
+      </div>
+
+      {/* Team Panel */}
+      <div role="tabpanel" hidden={tab !== 'team'}>
+        <h2 className="text-xl font-semibold mb-3">Team</h2>
+        {s.stylists?.length ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {s.stylists.map((st) => (
+              <div
+                key={st.id}
+                className="p-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]"
+              >
+                <div className="font-medium">{st.display_name}</div>
+                {st.avatar_url && (
+                  <img
+                    src={st.avatar_url}
+                    alt={st.display_name}
+                    className="mt-2 w-16 h-16 rounded-full object-cover"
+                  />
+                )}
+                <div className="text-xs opacity-70 mt-1">
+                  {st.active ? 'Aktiv' : 'Inaktiv'}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="opacity-80">Noch keine Teammitglieder hinterlegt.</div>
+        )}
+      </div>
     </section>
   );
 }
