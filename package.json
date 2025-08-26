@@ -4,6 +4,10 @@
   "scripts": {
     "install": "npm --prefix SalonManager install",
     "dev": "npm --prefix SalonManager run dev",
-    "test": "npm --prefix SalonManager test"
+    "test": "npm --prefix SalonManager test",
+    "db:up": "docker compose -f ops/docker-compose.yml up -d",
+    "db:down": "docker compose -f ops/docker-compose.yml down",
+    "db:migrate": "npm --prefix SalonManager run db:migrate",
+    "db:reset": "npm --prefix SalonManager run db:reset"
   }
 }

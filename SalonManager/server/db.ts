@@ -1,15 +1,22 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
-import * as schema from "@shared/schema";
+import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
+import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
+import { Pool } from 'pg';
+import Database from 'better-sqlite3';
+import * as schema from '@shared/schema';
+import { env } from './env';
 
-neonConfig.webSocketConstructor = ws;
+const url = env.DATABASE_URL;
+export const isSQLite = url.startsWith('file:');
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+let db: any;
+if (isSQLite) {
+  const sqlite = new Database(url.replace('file:', ''));
+  db = drizzleSqlite(sqlite, { schema });
+  console.log(`[db] SQLite ${url}`);
+} else {
+  const pool = new Pool({ connectionString: url });
+  db = drizzlePg(pool, { schema });
+  console.log(`[db] Postgres ${url}`);
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle({ client: pool, schema });
+export { db };

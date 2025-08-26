@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { env } from "./env";
+import { isSQLite } from "./db";
 import "./jobs/reminder";
 
 const app = express();
@@ -65,7 +66,7 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
-    const dbType = env.DATABASE_URL.startsWith('postgres') ? 'Postgres' : env.DATABASE_URL.includes('sqlite') ? 'SQLite' : 'unknown';
+    const dbType = isSQLite ? 'SQLite' : 'Postgres';
     const mailMode = env.SMTP_HOST ? 'SMTP' : 'JSON';
     log(`ENV DB=${dbType} ALLOWED_ORIGINS=${JSON.stringify(env.ALLOWED_ORIGINS)} MAIL=${mailMode} ENABLE_DEV_SEED=${env.ENABLE_DEV_SEED}`);
   });
