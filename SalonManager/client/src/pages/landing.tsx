@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useLocation } from "wouter";
 
@@ -8,51 +7,33 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-app text-on">
       {/* Hero Section */}
-      <div
-        className="relative py-32 px-4 sm:px-6 lg:px-8"
-        style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1519501025264-65ba15a82390?ixlib=rb-4.0.3&auto=format&fit=crop&w=2048&h=1024')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      >
-        <div className="absolute inset-0 bg-black/60"></div>
-        <div className="relative max-w-7xl mx-auto text-center">
-          <div className="mb-8">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">
-              <span className="text-gold-500">SM</span>
-            </h1>
-            <p className="text-xl md:text-2xl text-[var(--on-surface)]/70 mb-8 max-w-3xl mx-auto">
-              Dein Style. Dein Salon.
-            </p>
-          </div>
+      <section className="relative h-[80vh] flex items-center justify-center text-center">
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=2048&h=1024')] bg-cover bg-center" />
+        <div className="absolute inset-0 bg-black/60" />
 
-          <div className="space-y-4">
-            <h2 className="text-3xl md:text-5xl font-bold mb-6">
-              Buche Termine in Sekunden – mit <span className="text-[var(--primary)]">SalonManager</span>
-            </h2>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                onClick={() => navigate('/salons')}
-                aria-label="Salons entdecken"
-                className="bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all"
-                data-testid="button-explore-salons"
-              >
-                Salons entdecken
-              </Button>
-              <Button
-                variant="outline"
-                onClick={() => navigate('/about')}
-                aria-label="Mehr erfahren"
-                className="border border-[var(--foreground)] text-[var(--foreground)] hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)] px-8 py-4 text-lg font-semibold"
-                data-testid="button-learn-more"
-              >
-                Mehr erfahren
-              </Button>
-            </div>
+        <div className="relative z-10 max-w-3xl mx-auto px-4 text-[var(--on-surface)]">
+          <h1 className="text-4xl sm:text-5xl font-bold mb-4">
+            Dein Salon. Deine Buchung. Dein Style.
+          </h1>
+          <p className="text-lg sm:text-xl opacity-90 mb-8">
+            Finde den passenden Salon in Freiberg und buche deinen Termin direkt online.
+          </p>
+          <div className="flex gap-4 justify-center">
+            <button
+              onClick={() => navigate('/salons')}
+              className="px-6 py-3 rounded-md bg-[var(--primary)] text-black font-medium hover:opacity-90"
+            >
+              Salons entdecken
+            </button>
+            <button
+              onClick={() => navigate('/about')}
+              className="px-6 py-3 rounded-md border border-[var(--on-surface)] text-[var(--on-surface)] hover:bg-[var(--muted)]"
+            >
+              Mehr erfahren
+            </button>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Features Section */}
       <div className="py-16 px-4 sm:px-6 lg:px-8 bg-[var(--surface)]">
@@ -71,7 +52,7 @@ export default function Landing() {
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 bg-[var(--primary)] rounded-full flex items-center justify-center mx-auto mb-6">
                   <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                 </div>
                 <h3 className="text-xl font-bold mb-4">Online Terminbuchung</h3>
@@ -85,8 +66,8 @@ export default function Landing() {
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 bg-[var(--primary)] rounded-full flex items-center justify-center mx-auto mb-6">
                   <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
                 </div>
                 <h3 className="text-xl font-bold mb-4">Salon-Finder</h3>
@@ -100,7 +81,7 @@ export default function Landing() {
               <CardContent className="p-8 text-center">
                 <div className="w-16 h-16 bg-[var(--primary)] rounded-full flex items-center justify-center mx-auto mb-6">
                   <svg className="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
                   </svg>
                 </div>
                 <h3 className="text-xl font-bold mb-4">Mobile App</h3>
