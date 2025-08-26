@@ -1334,3 +1334,230 @@ export async function deleteStylist(stylistId: number, salonId: number) {
   return { ok: true };
 }
 
+// ---- WorkHours CRUD ----
+
+export type WorkHourInput = {
+  stylist_id: number;
+  weekday: number;
+  start: string;
+  end: string;
+};
+
+function isHHmm(v: string) {
+  return /^\d{2}:\d{2}$/.test(v);
+}
+
+function toMinutes(hhmm: string) {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+async function stylistBelongsToSalon(stylistId: number, salonId: number) {
+  const st = await db.query.stylists.findFirst({
+    where: (t, { and, eq }) => and(eq(t.id, String(stylistId)), eq(t.salonId, String(salonId))),
+  });
+  return !!st;
+}
+
+function validateWorkHourBase(input: Partial<WorkHourInput>) {
+  const errors: Record<string, string[]> = {};
+  if (!Number.isFinite(Number(input.stylist_id)))
+    (errors.stylist_id ??= []).push('required');
+  if (
+    !Number.isFinite(Number(input.weekday)) ||
+    input.weekday! < 0 ||
+    input.weekday! > 6
+  )
+    (errors.weekday ??= []).push('0..6');
+  if (typeof input.start !== 'string' || !isHHmm(input.start!))
+    (errors.start ??= []).push('HH:mm');
+  if (typeof input.end !== 'string' || !isHHmm(input.end!))
+    (errors.end ??= []).push('HH:mm');
+
+  if (!errors.start && !errors.end) {
+    const s = toMinutes(input.start!);
+    const e = toMinutes(input.end!);
+    if (s >= e) (errors.start ??= []).push('must be < end');
+    if (s % 15 !== 0) (errors.start ??= []).push('15-min step');
+    if (e % 15 !== 0) (errors.end ??= []).push('15-min step');
+  }
+  return errors;
+}
+
+async function hasOverlapRule(params: {
+  salonId: number;
+  stylistId: number;
+  weekday: number;
+  start: string;
+  end: string;
+  ignoreId?: number;
+}) {
+  const sMin = toMinutes(params.start);
+  const eMin = toMinutes(params.end);
+  const rules = await db.query.workHours.findMany({
+    where: (w, { and, eq, ne }) =>
+      and(
+        eq(w.salonId, String(params.salonId)),
+        eq(w.stylistId, String(params.stylistId)),
+        eq(w.weekday, params.weekday),
+        params.ignoreId ? ne(w.id, String(params.ignoreId)) : eq(w.id, w.id)
+      ),
+  });
+  return rules.some((r) => {
+    const rs = toMinutes((r.startTime as any).substring(0,5));
+    const re = toMinutes((r.endTime as any).substring(0,5));
+    return sMin < re && rs < eMin;
+  });
+}
+
+export async function listWorkHours(salonId: number, stylistId: number) {
+  const rows = await db.query.workHours.findMany({
+    where: (w, { and, eq }) =>
+      and(eq(w.salonId, String(salonId)), eq(w.stylistId, String(stylistId))),
+    orderBy: (w, { asc }) => [asc(w.weekday), asc(w.startTime)],
+  });
+  return rows.map((r) => ({
+    id: Number(r.id),
+    salon_id: Number(r.salonId),
+    stylist_id: Number(r.stylistId),
+    weekday: r.weekday,
+    start: (r.startTime as any).toString().slice(0, 5),
+    end: (r.endTime as any).toString().slice(0, 5),
+  }));
+}
+
+export async function createWorkHour(
+  salonId: number,
+  input: WorkHourInput,
+) {
+  const baseErr = validateWorkHourBase(input);
+  if (Object.keys(baseErr).length)
+    return { ok: false, status: 422, errors: baseErr };
+
+  if (!(await stylistBelongsToSalon(input.stylist_id, salonId))) {
+    return { ok: false, status: 422, errors: { stylist_id: ['not in salon'] } };
+  }
+
+  if (
+    await hasOverlapRule({
+      salonId,
+      stylistId: input.stylist_id,
+      weekday: input.weekday,
+      start: input.start,
+      end: input.end,
+    })
+  ) {
+    return {
+      ok: false,
+      status: 422,
+      errors: { start: ['overlaps existing rule'] },
+    };
+  }
+
+  const inserted = await db
+    .insert(workHours)
+    .values({
+      salonId: String(salonId),
+      stylistId: String(input.stylist_id),
+      weekday: input.weekday,
+      startTime: input.start,
+      endTime: input.end,
+    })
+    .returning();
+
+  const r = inserted[0];
+  return {
+    ok: true,
+    data: {
+      id: Number(r.id),
+      salon_id: Number(r.salonId),
+      stylist_id: Number(r.stylistId),
+      weekday: r.weekday,
+      start: (r.startTime as any).toString().slice(0, 5),
+      end: (r.endTime as any).toString().slice(0, 5),
+    },
+  };
+}
+
+export async function updateWorkHour(
+  salonId: number,
+  id: number,
+  patch: Partial<WorkHourInput>,
+) {
+  const existing = await db.query.workHours.findFirst({
+    where: (w, { and, eq }) =>
+      and(eq(w.id, String(id)), eq(w.salonId, String(salonId))),
+  });
+  if (!existing)
+    return { ok: false, status: 404, errors: { id: ['not found in salon'] } };
+
+  const next: WorkHourInput = {
+    stylist_id: patch.stylist_id ?? Number(existing.stylistId),
+    weekday: patch.weekday ?? existing.weekday,
+    start: patch.start ?? (existing.startTime as any).toString().slice(0, 5),
+    end: patch.end ?? (existing.endTime as any).toString().slice(0, 5),
+  };
+
+  const baseErr = validateWorkHourBase(next);
+  if (Object.keys(baseErr).length)
+    return { ok: false, status: 422, errors: baseErr };
+
+  if (!(await stylistBelongsToSalon(next.stylist_id, salonId))) {
+    return { ok: false, status: 422, errors: { stylist_id: ['not in salon'] } };
+  }
+
+  if (
+    await hasOverlapRule({
+      salonId,
+      stylistId: next.stylist_id,
+      weekday: next.weekday,
+      start: next.start,
+      end: next.end,
+      ignoreId: id,
+    })
+  ) {
+    return {
+      ok: false,
+      status: 422,
+      errors: { start: ['overlaps existing rule'] },
+    };
+  }
+
+  const updated = await db
+    .update(workHours)
+    .set({
+      stylistId: String(next.stylist_id),
+      weekday: next.weekday,
+      startTime: next.start,
+      endTime: next.end,
+    })
+    .where(eq(workHours.id, String(id)))
+    .returning();
+
+  const r = updated[0];
+  return {
+    ok: true,
+    data: {
+      id: Number(r.id),
+      salon_id: Number(r.salonId),
+      stylist_id: Number(r.stylistId),
+      weekday: r.weekday,
+      start: (r.startTime as any).toString().slice(0, 5),
+      end: (r.endTime as any).toString().slice(0, 5),
+    },
+  };
+}
+
+export async function deleteWorkHour(salonId: number, id: number) {
+  const existing = await db.query.workHours.findFirst({
+    where: (w, { and, eq }) =>
+      and(eq(w.id, String(id)), eq(w.salonId, String(salonId))),
+  });
+  if (!existing)
+    return { ok: false, status: 404, errors: { id: ['not found in salon'] } };
+
+  await db.delete(workHours).where(eq(workHours.id, String(id)));
+  return { ok: true };
+}
+
+

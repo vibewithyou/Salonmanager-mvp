@@ -291,3 +291,100 @@ export function useDeleteStylist(salonId: number) {
       qc.invalidateQueries({ queryKey: ['stylists', salonId] }),
   });
 }
+
+// ---- Work Hours CRUD ----
+export type WorkHourDto = {
+  id: number;
+  salon_id: number;
+  stylist_id: number;
+  weekday: number;
+  start: string;
+  end: string;
+};
+
+export function useWorkHours(salonId: number, stylistId: number) {
+  return useQuery({
+    queryKey: ['work-hours', salonId, stylistId],
+    queryFn: async () => {
+      const r = await fetch(
+        `/api/v1/salons/${salonId}/stylists/${stylistId}/work-hours`,
+        { credentials: 'include' },
+      );
+      if (!r.ok) throw new Error(await r.text());
+      return (await r.json()) as WorkHourDto[];
+    },
+    enabled: !!salonId && !!stylistId,
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateWorkHour(salonId: number, stylistId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      weekday: number;
+      start: string;
+      end: string;
+    }) => {
+      const r = await fetch(
+        `/api/v1/salons/${salonId}/stylists/${stylistId}/work-hours`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify(payload),
+        },
+      );
+      if (!r.ok) throw new Error(await r.text());
+      return await r.json();
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['work-hours', salonId, stylistId] }),
+  });
+}
+
+export function useUpdateWorkHour(salonId: number, stylistId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      id: number;
+      weekday?: number;
+      start?: string;
+      end?: string;
+    }) => {
+      const r = await fetch(
+        `/api/v1/work-hours/${input.id}?salon_id=${salonId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({
+            weekday: input.weekday,
+            start: input.start,
+            end: input.end,
+          }),
+        },
+      );
+      if (!r.ok) throw new Error(await r.text());
+      return await r.json();
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['work-hours', salonId, stylistId] }),
+  });
+}
+
+export function useDeleteWorkHour(salonId: number, stylistId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const r = await fetch(
+        `/api/v1/work-hours/${id}?salon_id=${salonId}`,
+        { method: 'DELETE', credentials: 'include' },
+      );
+      if (!r.ok) throw new Error(await r.text());
+      return await r.json();
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['work-hours', salonId, stylistId] }),
+  });
+}

@@ -11,6 +11,10 @@ import {
   updateStylist,
   deleteStylist,
   updateBookingStatus,
+  listWorkHours,
+  createWorkHour,
+  updateWorkHour,
+  deleteWorkHour,
 } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 
@@ -191,6 +195,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ ok: true });
     } catch (err) {
       next(err);
+    }
+  });
+
+  // Work hours CRUD
+  app.get(
+    '/api/v1/salons/:id/stylists/:stylistId/work-hours',
+    async (req, res, next) => {
+      try {
+        const salonId = Number(req.params.id);
+        const stylistId = Number(req.params.stylistId);
+        if (!Number.isFinite(salonId) || !Number.isFinite(stylistId))
+          return res.status(400).json({ message: 'invalid ids' });
+        const rows = await listWorkHours(salonId, stylistId);
+        res.json(rows);
+      } catch (e) {
+        next(e);
+      }
+    },
+  );
+
+  app.post(
+    '/api/v1/salons/:id/stylists/:stylistId/work-hours',
+    async (req, res, next) => {
+      try {
+        const salonId = Number(req.params.id);
+        const stylistId = Number(req.params.stylistId);
+        const { weekday, start, end } = req.body ?? {};
+        const r = await createWorkHour(salonId, {
+          stylist_id: stylistId,
+          weekday,
+          start,
+          end,
+        });
+        if (!r.ok)
+          return res
+            .status(r.status!)
+            .json({ message: 'Validation failed', errors: r.errors });
+        res.status(201).json(r.data);
+      } catch (e) {
+        next(e);
+      }
+    },
+  );
+
+  app.patch('/api/v1/work-hours/:workHourId', async (req, res, next) => {
+    try {
+      const id = Number(req.params.workHourId);
+      const salonId = Number(req.query.salon_id);
+      const patch = req.body ?? {};
+      if (!Number.isFinite(id) || !Number.isFinite(salonId))
+        return res
+          .status(400)
+          .json({ message: 'workHourId & salon_id required' });
+      const r = await updateWorkHour(salonId, id, patch);
+      if (!r.ok)
+        return res
+          .status(r.status!)
+          .json({ message: 'Validation failed', errors: r.errors });
+      res.json(r.data);
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  app.delete('/api/v1/work-hours/:workHourId', async (req, res, next) => {
+    try {
+      const id = Number(req.params.workHourId);
+      const salonId = Number(req.query.salon_id);
+      if (!Number.isFinite(id) || !Number.isFinite(salonId))
+        return res
+          .status(400)
+          .json({ message: 'workHourId & salon_id required' });
+      const r = await deleteWorkHour(salonId, id);
+      if (!r.ok)
+        return res
+          .status(r.status!)
+          .json({ message: 'Validation failed', errors: r.errors });
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
     }
   });
 

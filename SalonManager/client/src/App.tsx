@@ -14,6 +14,7 @@ import MyBookings from "@/pages/my-bookings";
 import AdminTodayPage from "@/pages/admin-today";
 import AdminServicesPage from "@/pages/admin-services";
 import AdminStylistsPage from "@/pages/admin-stylists";
+import AdminWorkHoursPage from "@/pages/admin-workhours";
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
             <Route path="/admin/today" component={AdminTodayPage} />
             <Route path="/admin/services" component={AdminServicesPage} />
             <Route path="/admin/stylists" component={AdminStylistsPage} />
+            <Route path="/admin/workhours" component={AdminWorkHoursPage} />
             <Route>{() => <div style={{ padding: 24 }}>404 – Seite nicht gefunden</div>}</Route>
           </Switch>
         </TooltipProvider>
