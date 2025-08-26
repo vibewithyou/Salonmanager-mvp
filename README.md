@@ -2,9 +2,8 @@
 
 ## Development
 
-1. Install dependencies:
+1. Install dependencies (runs in `SalonManager/`):
    ```bash
-   cd SalonManager
    npm install
    ```
 2. Start the development server (serves API and client):

@@ -1,0 +1,9 @@
+{
+  "name": "salonmanager-root",
+  "private": true,
+  "scripts": {
+    "install": "npm --prefix SalonManager install",
+    "dev": "npm --prefix SalonManager run dev",
+    "test": "npm --prefix SalonManager test"
+  }
+}
