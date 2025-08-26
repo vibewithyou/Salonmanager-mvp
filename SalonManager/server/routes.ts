@@ -42,16 +42,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/v1/salons/:id', async (req, res) => {
+  app.get('/api/v1/salons/:id', async (req, res, next) => {
     try {
-      const salon = await storage.getSalon(req.params.id);
-      if (!salon) {
-        return res.status(404).json({ message: "Salon not found" });
+      const id = req.params.id;
+      if (!/^[0-9a-fA-F-]{36}$/.test(id)) {
+        return res.status(400).json({ message: 'Invalid id' });
       }
-      res.json(salon);
-    } catch (error) {
-      console.error("Error fetching salon:", error);
-      res.status(500).json({ message: "Failed to fetch salon" });
+
+      const data = await storage.getSalon(id);
+      if (!data) {
+        return res.status(404).json({ message: 'Salon not found' });
+      }
+      res.json(data);
+    } catch (err) {
+      next(err);
     }
   });
 

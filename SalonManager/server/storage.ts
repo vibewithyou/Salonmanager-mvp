@@ -18,7 +18,6 @@ import {
   type InsertService,
   type InsertStylist,
   type InsertBooking,
-  type SalonWithDetails,
   type BookingWithDetails,
 } from "@shared/schema";
 import { db } from "./db";
@@ -34,6 +33,31 @@ export type SalonListItem = {
   services: Array<{ id: string; title: string; price_cents: number }>;
 };
 
+export type SalonDetail = {
+  id: string;
+  name: string;
+  slug: string;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  phone?: string | null;
+  email?: string | null;
+  open_hours_json?: any | null;
+  services: Array<{
+    id: string;
+    title: string;
+    duration_min: number;
+    price_cents: number;
+    active: boolean;
+  }>;
+  stylists: Array<{
+    id: string;
+    display_name: string;
+    avatar_url: string | null;
+    active: boolean;
+  }>;
+};
+
 export interface IStorage {
   // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
@@ -41,8 +65,8 @@ export interface IStorage {
 
   // Salon operations
   getSalons(): Promise<SalonListItem[]>;
-  getSalon(id: string): Promise<SalonWithDetails | undefined>;
-  getSalonBySlug(slug: string): Promise<SalonWithDetails | undefined>;
+  getSalon(id: string): Promise<SalonDetail | null>;
+  getSalonBySlug(slug: string): Promise<SalonDetail | null>;
   createSalon(salon: InsertSalon): Promise<Salon>;
 
   // Service operations
@@ -153,38 +177,68 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getSalon(id: string): Promise<SalonWithDetails | undefined> {
-    const [salon] = await db.select().from(salons).where(eq(salons.id, id));
-    if (!salon) return undefined;
+  async getSalon(id: string): Promise<SalonDetail | null> {
+    const [salon] = await db
+      .select({
+        id: salons.id,
+        name: salons.name,
+        slug: salons.slug,
+        address: salons.address,
+        lat: salons.lat,
+        lng: salons.lng,
+        phone: salons.phone,
+        email: salons.email,
+        open_hours_json: salons.openHoursJson,
+      })
+      .from(salons)
+      .where(eq(salons.id, id));
 
-    const salonServices = await db.select().from(services).where(eq(services.salonId, id));
-    const salonStylists = await db
+    if (!salon) return null;
+
+    const serviceRows = await db
+      .select({
+        id: services.id,
+        title: services.title,
+        duration_min: services.durationMin,
+        price_cents: services.priceCents,
+        active: services.active,
+      })
+      .from(services)
+      .where(eq(services.salonId, id));
+
+    const stylistRows = await db
       .select({
         id: stylists.id,
-        salonId: stylists.salonId,
-        userId: stylists.userId,
-        displayName: stylists.displayName,
-        avatarUrl: stylists.avatarUrl,
+        display_name: stylists.displayName,
+        avatar_url: stylists.avatarUrl,
         active: stylists.active,
-        isApprentice: stylists.isApprentice,
-        createdAt: stylists.createdAt,
-        updatedAt: stylists.updatedAt,
-        user: users,
       })
       .from(stylists)
-      .innerJoin(users, eq(stylists.userId, users.id))
       .where(eq(stylists.salonId, id));
 
     return {
       ...salon,
-      services: salonServices,
-      stylists: salonStylists,
+      lat: salon.lat !== null ? Number(salon.lat) : null,
+      lng: salon.lng !== null ? Number(salon.lng) : null,
+      services: serviceRows.map((s) => ({
+        id: s.id,
+        title: s.title,
+        duration_min: s.duration_min,
+        price_cents: s.price_cents,
+        active: s.active,
+      })),
+      stylists: stylistRows.map((s) => ({
+        id: s.id,
+        display_name: s.display_name,
+        avatar_url: s.avatar_url,
+        active: s.active,
+      })),
     };
   }
 
-  async getSalonBySlug(slug: string): Promise<SalonWithDetails | undefined> {
+  async getSalonBySlug(slug: string): Promise<SalonDetail | null> {
     const [salon] = await db.select().from(salons).where(eq(salons.slug, slug));
-    if (!salon) return undefined;
+    if (!salon) return null;
     return this.getSalon(salon.id);
   }
 
