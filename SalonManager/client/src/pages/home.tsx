@@ -24,7 +24,7 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-app">
         <NavigationHeader />
         <div className="flex items-center justify-center h-96">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold-500"></div>
@@ -34,11 +34,11 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-app text-on">
       <NavigationHeader />
       
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-dark-900 to-dark-800 text-white py-16">
+      <section className="relative bg-[var(--surface)] text-[var(--on-surface)] py-16">
         <div 
           className="absolute inset-0 opacity-20"
           style={{
@@ -49,24 +49,24 @@ export default function Home() {
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl md:text-6xl font-bold mb-6">
-            Finden Sie Ihren <span className="text-gold-500">perfekten</span> Friseur
+            Finden Sie Ihren <span className="text-[var(--primary)]">perfekten</span> Friseur
           </h2>
-          <p className="text-xl md:text-2xl text-gray-300 mb-8 max-w-3xl mx-auto">
+          <p className="text-xl md:text-2xl text-[var(--on-surface)]/70 mb-8 max-w-3xl mx-auto">
             Entdecken Sie die besten Salons in Freiberg und buchen Sie Ihren Termin online
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/salons">
-              <Button 
-                className="bg-gold-500 hover:bg-gold-600 text-dark-900 px-8 py-4 rounded-xl font-semibold text-lg transition-all transform hover:scale-105"
+              <Button
+                className="bg-[var(--primary)] hover:opacity-90 text-black px-8 py-4 rounded-xl font-semibold text-lg transition-all transform hover:scale-105"
                 data-testid="button-book-now"
               >
                 Jetzt Termin buchen
               </Button>
             </Link>
             <Link href="/salons">
-              <Button 
+              <Button
                 variant="outline"
-                className="border-2 border-gold-500 text-gold-500 hover:bg-gold-500 hover:text-dark-900 px-8 py-4 rounded-xl font-semibold text-lg transition-all"
+                className="border-2 border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-black px-8 py-4 rounded-xl font-semibold text-lg transition-all"
                 data-testid="button-discover-salons"
               >
                 Salons entdecken

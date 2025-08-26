@@ -18,7 +18,7 @@ export default function SalonDetail() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-app">
         <NavigationHeader />
         <div className="flex items-center justify-center h-96">
           <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gold-500"></div>
@@ -32,10 +32,10 @@ export default function SalonDetail() {
       <div className="min-h-screen bg-background">
         <NavigationHeader />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+          <h1 className="text-3xl font-bold text-[var(--on-surface)] mb-4">
             Salon nicht gefunden
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-[var(--on-surface)]/70">
             Der angeforderte Salon konnte nicht gefunden werden.
           </p>
         </div>
@@ -44,7 +44,7 @@ export default function SalonDetail() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-app text-on">
       <NavigationHeader />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -57,7 +57,7 @@ export default function SalonDetail() {
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-            <div className="absolute bottom-6 left-6 text-white">
+            <div className="absolute bottom-6 left-6 text-[var(--on-surface)]">
               <h1 className="text-4xl font-bold mb-2" data-testid="text-salon-name">{salon.name}</h1>
               <p className="text-xl" data-testid="text-salon-address">{salon.address}</p>
             </div>
@@ -67,20 +67,20 @@ export default function SalonDetail() {
             <div>
               <div className="flex items-center space-x-4 mb-2">
                 <div className="flex items-center space-x-1">
-                  <svg className="w-5 h-5 text-gold-500" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="w-5 h-5 text-[var(--primary)]" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
                   </svg>
                   <span className="font-semibold">4.8</span>
-                  <span className="text-gray-600 dark:text-gray-400">(127 Bewertungen)</span>
+                  <span className="text-[var(--on-surface)]/70">(127 Bewertungen)</span>
                 </div>
               </div>
-              <div className="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+              <div className="flex items-center space-x-4 text-sm text-[var(--on-surface)]/70">
                 <span data-testid="text-salon-phone">{salon.phone}</span>
                 <span data-testid="text-salon-email">{salon.email}</span>
               </div>
             </div>
             <Button
-              className="bg-gold-500 hover:bg-gold-600 text-dark-900 px-8 py-3 text-lg font-semibold"
+              className="bg-[var(--primary)] hover:opacity-90 text-black px-8 py-3 text-lg font-semibold"
               onClick={() => setShowBookingModal(true)}
               data-testid="button-book-appointment"
             >
@@ -97,19 +97,19 @@ export default function SalonDetail() {
                 <h2 className="text-2xl font-bold mb-6">Services</h2>
                 <div className="space-y-4">
                   {salon.services.map((service) => (
-                    <div 
-                      key={service.id} 
-                      className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-lg hover:border-gold-400 transition-colors"
+                    <div
+                      key={service.id}
+                      className="flex items-center justify-between p-4 border border-[var(--border)] rounded-lg hover:border-[var(--primary)] transition-colors"
                       data-testid={`service-${service.id}`}
                     >
                       <div>
                         <h3 className="font-semibold text-lg" data-testid="text-service-title">{service.title}</h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-[var(--on-surface)]/70">
                           Dauer: {service.durationMin} Min
                         </p>
                       </div>
                       <div className="text-right">
-                        <span className="text-2xl font-bold text-gold-500" data-testid="text-service-price">
+                        <span className="text-2xl font-bold text-[var(--primary)]" data-testid="text-service-price">
                           {(service.priceCents / 100).toFixed(2)} €
                         </span>
                         {service.active && (
