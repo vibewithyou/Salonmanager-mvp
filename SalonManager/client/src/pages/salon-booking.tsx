@@ -24,6 +24,33 @@ function todayISO() {
   return fmt.format(now);
 }
 
+function groupSlotsByHour(
+  slots: Array<{ start: string; end: string; stylistId?: number }>
+) {
+  const map = new Map<string, Array<typeof slots[number]>>();
+  for (const s of slots) {
+    const d = new Date(s.start);
+    const key =
+      d.toLocaleTimeString('de-DE', { hour: '2-digit' }) + ':00';
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(s);
+  }
+  return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+}
+
+function labelTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('de-DE', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function addDaysISO(baseISO: string, days: number) {
+  const d = new Date(baseISO + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
 export default function SalonBookingWizard() {
   const { id } = useParams<{ id: string }>();
   const { data: salon, isLoading, isError, error, refetch } = useSalon(id!);
@@ -31,6 +58,9 @@ export default function SalonBookingWizard() {
   const [service, setService] = useState<ChosenService | null>(null);
   const [date, setDate] = useState<string>(todayISO());
   const [slot, setSlot] = useState<ChosenSlot | null>(null);
+
+  const minDate = todayISO();
+  const maxDate = addDaysISO(minDate, 30);
 
   const steps = ['Service wählen', 'Datum & Uhrzeit', 'Bestätigen'];
 
@@ -167,22 +197,22 @@ export default function SalonBookingWizard() {
           </>
         )}
 
+        
         {step === 1 && (
           <>
             <h2 className="text-lg font-semibold mb-4">2) Datum & Uhrzeit</h2>
 
-            {/* Datumsauswahl */}
+            {/* Datum */}
             <div className="mb-4 flex items-center gap-3">
-              <label
-                htmlFor="booking-date"
-                className="text-sm opacity-80"
-              >
+              <label htmlFor="booking-date" className="text-sm opacity-80">
                 Datum
               </label>
               <input
                 id="booking-date"
                 type="date"
                 value={date}
+                min={minDate}
+                max={maxDate}
                 onChange={e => {
                   setDate(e.target.value);
                   setSlot(null);
@@ -190,24 +220,35 @@ export default function SalonBookingWizard() {
                 className="px-3 py-2 rounded border border-[var(--border)] bg-[var(--surface)]"
                 aria-label="Datum auswählen"
               />
+              <button
+                onClick={() => refetchSlots()}
+                className="px-3 py-2 rounded border border-[var(--on-surface)]/30 hover:bg-[var(--muted)] text-sm"
+                aria-label="Slots neu laden"
+              >
+                Aktualisieren
+              </button>
             </div>
 
-            {/* Slots */}
             {!service && (
               <div className="text-sm text-amber-600">
-                Bitte zuerst in Schritt 1 einen Service wählen.
+                Bitte zuerst einen Service in Schritt 1 wählen.
               </div>
             )}
 
             {service && slotsLoading && (
-              <div>Verfügbare Zeiten werden geladen…</div>
+              <div className="space-y-2">
+                <div className="h-4 w-40 bg-[var(--muted)] rounded" />
+                <div className="flex flex-wrap gap-2">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="h-9 w-20 rounded bg-[var(--muted)]" />
+                  ))}
+                </div>
+              </div>
             )}
 
             {service && slotsError && (
               <div className="p-3 rounded border border-[var(--border)] bg-[var(--surface)]">
-                <div className="text-red-600 text-sm mb-2">
-                  Konnte Slots nicht laden.
-                </div>
+                <div className="text-red-600 text-sm mb-1">Konnte Slots nicht laden.</div>
                 <pre className="text-xs opacity-80 whitespace-pre-wrap">
                   {(slotsErr as Error).message}
                 </pre>
@@ -217,10 +258,6 @@ export default function SalonBookingWizard() {
                 >
                   Erneut laden
                 </button>
-                <div className="text-xs opacity-70 mt-2">
-                  Hinweis: Falls die Slots-API (Prompt 22) noch nicht implementiert ist,
-                  erscheint dieser Fehler.
-                </div>
               </div>
             )}
 
@@ -228,51 +265,51 @@ export default function SalonBookingWizard() {
               <>
                 {!slots || slots.length === 0 ? (
                   <div className="opacity-80">
-                    Keine freien Zeiten für dieses Datum.
+                    Keine freien Zeiten für dieses Datum. Bitte anderen Tag wählen.
                   </div>
                 ) : (
-                  <div className="flex flex-wrap gap-2">
-                    {slots.map((sl, idx) => {
-                      const active =
-                        slot?.start === sl.start && slot?.end === sl.end;
-                      const start = new Date(sl.start);
-                      const label = start.toLocaleTimeString('de-DE', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      });
-                      return (
-                        <button
-                          key={idx}
-                          onClick={() =>
-                            setSlot({
-                              start: sl.start,
-                              end: sl.end,
-                              stylistId: sl.stylistId,
-                            })
-                          }
-                          className={`px-3 py-2 rounded border text-sm ${
-                            active
-                              ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/40'
-                              : 'border-[var(--border)] hover:bg-[var(--muted)]'
-                          }`}
-                          aria-pressed={active}
-                          aria-label={`Zeit ${label} wählen`}
-                        >
-                          {label}
-                        </button>
-                      );
-                    })}
+                  <div className="space-y-4">
+                    {groupSlotsByHour(slots!).map(([hour, list]) => (
+                      <div key={hour}>
+                        <div className="text-sm font-medium mb-2 opacity-80">{hour}</div>
+                        <div className="flex flex-wrap gap-2">
+                          {list.map((sl, idx) => {
+                            const active =
+                              slot?.start === sl.start && slot?.end === sl.end;
+                            const label = labelTime(sl.start);
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() =>
+                                  setSlot({
+                                    start: sl.start,
+                                    end: sl.end,
+                                    stylistId: sl.stylistId,
+                                  })
+                                }
+                                className={`px-3 py-2 rounded border text-sm transition ${
+                                  active
+                                    ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/40'
+                                    : 'border-[var(--border)] hover:bg-[var(--muted)]'
+                                }`}
+                                aria-pressed={active}
+                                aria-label={'Zeit ' + label + ' wählen' + (sl.stylistId ? ', Stylist-ID ' + sl.stylistId : '')}
+                                title={sl.stylistId ? 'Stylist: ' + sl.stylistId : 'Beliebiger Stylist'}
+                              >
+                                {label}
+                                {sl.stylistId ? ` · #${sl.stylistId}` : ''}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
                 {slot && (
                   <div className="mt-3 text-sm opacity-90">
-                    Gewählt:{' '}
-                    <strong>
-                      {new Date(slot.start).toLocaleTimeString('de-DE', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </strong>
+                    Gewählt: <strong>{labelTime(slot.start)}</strong>
+                    {slot.stylistId ? ` · Stylist #${slot.stylistId}` : ' · beliebiger Stylist'}
                   </div>
                 )}
               </>
