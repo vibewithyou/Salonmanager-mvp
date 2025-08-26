@@ -9,11 +9,11 @@ import { Badge } from "@/components/ui/badge";
 import type { SalonWithDetails } from "@shared/schema";
 
 export default function SalonDetail() {
-  const { slug } = useParams();
+  const { id } = useParams();
   const [showBookingModal, setShowBookingModal] = useState(false);
 
   const { data: salon, isLoading } = useQuery<SalonWithDetails>({
-    queryKey: [`/api/v1/salons/${slug}`],
+    queryKey: [`/api/v1/salons/${id}`],
   });
 
   if (isLoading) {

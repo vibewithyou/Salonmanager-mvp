@@ -1,8 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 
 export default function Landing() {
+  const [, navigate] = useLocation();
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-dark-900 to-dark-800 text-white">
       {/* Hero Section */}
@@ -30,23 +32,21 @@ export default function Landing() {
               Buche Termine in Sekunden – mit <span className="text-gold-500">SalonManager</span>
             </h2>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/salons">
-                <Button
-                  className="bg-gold-500 hover:bg-gold-600 text-dark-900 px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all"
-                  data-testid="button-explore-salons"
-                >
-                  Salons entdecken
-                </Button>
-              </Link>
-              <Link href="/about">
-                <Button
-                  variant="outline"
-                  className="border-2 border-gold-500 text-gold-500 hover:bg-gold-500 hover:text-dark-900 px-8 py-4 text-lg font-semibold"
-                  data-testid="button-learn-more"
-                >
-                  Mehr erfahren
-                </Button>
-              </Link>
+              <Button
+                onClick={() => navigate('/salons')}
+                className="bg-gold-500 hover:bg-gold-600 text-dark-900 px-8 py-4 text-lg font-semibold transform hover:scale-105 transition-all"
+                data-testid="button-explore-salons"
+              >
+                Salons entdecken
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/about')}
+                className="border-2 border-gold-500 text-gold-500 hover:bg-gold-500 hover:text-dark-900 px-8 py-4 text-lg font-semibold"
+                data-testid="button-learn-more"
+              >
+                Mehr erfahren
+              </Button>
             </div>
           </div>
         </div>

@@ -8,21 +8,21 @@ import { Link } from "wouter";
 import type { SalonWithDetails } from "@shared/schema";
 
 export default function SalonBooking() {
-  const { slug } = useParams<{ slug: string }>();
+  const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const [showBookingModal, setShowBookingModal] = useState(true);
 
   const { data: salon, isLoading } = useQuery<SalonWithDetails>({
-    queryKey: [`/api/v1/salons/by-slug/${slug}`],
-    enabled: !!slug,
+    queryKey: [`/api/v1/salons/${id}`],
+    enabled: !!id,
   });
 
   useEffect(() => {
     if (!showBookingModal) {
       // Navigate back to salon detail when booking modal closes
-      setLocation(`/salon/${slug}`);
+      setLocation(`/salon/${id}`);
     }
-  }, [showBookingModal, slug, setLocation]);
+  }, [showBookingModal, id, setLocation]);
 
   if (isLoading) {
     return (

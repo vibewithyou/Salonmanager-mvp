@@ -6,7 +6,7 @@ import { useTheme } from "@/components/theme-provider";
 import type { User } from "@shared/schema";
 
 export default function NavigationHeader() {
-  const [location] = useLocation();
+  const [location, navigate] = useLocation();
   const { user, isAuthenticated } = useAuth();
   const { theme, toggleTheme } = useTheme();
 
@@ -98,13 +98,15 @@ export default function NavigationHeader() {
             {isAuthenticated && user ? (
               <div className="relative">
                 <div className="flex items-center space-x-3">
-                  <Link href="/profile">
-                    <div className="w-8 h-8 bg-gold-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-gold-600 transition-colors" data-testid="button-profile-icon">
-                      <span className="text-dark-900 font-semibold text-sm" data-testid="text-user-initials">
-                        {getInitials(user?.firstName, user?.lastName)}
-                      </span>
-                    </div>
-                  </Link>
+                  <div
+                    className="w-8 h-8 bg-gold-500 rounded-full flex items-center justify-center cursor-pointer hover:bg-gold-600 transition-colors"
+                    onClick={() => navigate('/profile')}
+                    data-testid="button-profile-icon"
+                  >
+                    <span className="text-dark-900 font-semibold text-sm" data-testid="text-user-initials">
+                      {getInitials(user?.firstName, user?.lastName)}
+                    </span>
+                  </div>
                   <span className="hidden md:block font-medium" data-testid="text-user-name">
                     {user?.firstName} {user?.lastName}
                   </span>
