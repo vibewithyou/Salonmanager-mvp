@@ -1,8 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
+import { storage, listServicesBySalon, createService, updateService, deleteService } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertSalonSchema, insertServiceSchema, insertStylistSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -71,13 +70,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/v1/salons/:id/services', async (req, res) => {
+  app.get('/api/v1/salons/:id/services', async (req, res, next) => {
     try {
-      const services = await storage.getServicesBySalon(req.params.id);
-      res.json(services);
-    } catch (error) {
-      console.error("Error fetching services:", error);
-      res.status(500).json({ message: "Failed to fetch services" });
+      const salonId = Number(req.params.id);
+      if (!Number.isFinite(salonId)) {
+        return res.status(400).json({ message: 'invalid salon id' });
+      }
+      const items = await listServicesBySalon(salonId);
+      res.json(items);
+    } catch (err) {
+      next(err);
     }
   });
 
@@ -201,40 +203,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin routes (salon_owner only)
-  app.post('/api/v1/salons/:id/services', isAuthenticated, async (req: any, res) => {
+  // Services CRUD
+  app.post('/api/v1/salons/:id/services', async (req, res, next) => {
     try {
-      const serviceData = insertServiceSchema.parse({
-        ...req.body,
-        salonId: req.params.id,
+      const salonId = Number(req.params.id);
+      if (!Number.isFinite(salonId)) {
+        return res.status(400).json({ message: 'invalid salon id' });
+      }
+      const { title, duration_min, price_cents, active } = req.body ?? {};
+      const result = await createService(salonId, {
+        title,
+        duration_min,
+        price_cents,
+        active,
       });
-
-      const service = await storage.createService(serviceData);
-      res.json(service);
-    } catch (error) {
-      console.error("Error creating service:", error);
-      res.status(500).json({ message: "Failed to create service" });
+      if (!result.ok) {
+        return res
+          .status(result.status ?? 500)
+          .json({ message: 'Validation failed', errors: result.errors });
+      }
+      res.status(201).json(result.data);
+    } catch (err) {
+      next(err);
     }
   });
 
-  app.patch('/api/v1/services/:id', isAuthenticated, async (req, res) => {
+  app.patch('/api/v1/services/:serviceId', async (req, res, next) => {
     try {
-      const serviceData = insertServiceSchema.partial().parse(req.body);
-      const service = await storage.updateService(req.params.id, serviceData);
-      res.json(service);
-    } catch (error) {
-      console.error("Error updating service:", error);
-      res.status(500).json({ message: "Failed to update service" });
+      const serviceId = Number(req.params.serviceId);
+      const salonId = Number(req.query.salon_id);
+      if (!Number.isFinite(serviceId) || !Number.isFinite(salonId)) {
+        return res
+          .status(400)
+          .json({ message: 'serviceId & salon_id required' });
+      }
+      const { title, duration_min, price_cents, active } = req.body ?? {};
+      const result = await updateService(serviceId, salonId, {
+        title,
+        duration_min,
+        price_cents,
+        active,
+      });
+      if (!result.ok) {
+        return res
+          .status(result.status ?? 500)
+          .json({ message: 'Validation failed', errors: result.errors });
+      }
+      res.json(result.data);
+    } catch (err) {
+      next(err);
     }
   });
 
-  app.delete('/api/v1/services/:id', isAuthenticated, async (req, res) => {
+  app.delete('/api/v1/services/:serviceId', async (req, res, next) => {
     try {
-      await storage.deleteService(req.params.id);
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting service:", error);
-      res.status(500).json({ message: "Failed to delete service" });
+      const serviceId = Number(req.params.serviceId);
+      const salonId = Number(req.query.salon_id);
+      if (!Number.isFinite(serviceId) || !Number.isFinite(salonId)) {
+        return res
+          .status(400)
+          .json({ message: 'serviceId & salon_id required' });
+      }
+      const result = await deleteService(serviceId, salonId);
+      if (!result.ok) {
+        return res
+          .status(result.status ?? 500)
+          .json({ message: 'Validation failed', errors: result.errors });
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
     }
   });
 

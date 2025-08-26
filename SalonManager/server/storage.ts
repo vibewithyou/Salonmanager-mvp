@@ -1031,3 +1031,111 @@ export class DatabaseStorage implements IStorage {
 }
 
 export const storage = new DatabaseStorage();
+
+// --- Services CRUD for Admin ---
+export type ServiceInput = {
+  title: string;
+  duration_min: number;
+  price_cents: number;
+  active?: boolean;
+};
+
+function validateServiceInput(input: Partial<ServiceInput>) {
+  const errors: Record<string, string[]> = {};
+  if (!input.title || input.title.trim().length < 3) {
+    (errors.title ??= []).push('min length 3');
+  }
+  const dur = Number(input.duration_min);
+  if (!Number.isFinite(dur) || dur < 10 || dur > 240) {
+    (errors.duration_min ??= []).push('10..240');
+  }
+  const price = Number(input.price_cents);
+  if (!Number.isFinite(price) || price < 0 || price > 500000) {
+    (errors.price_cents ??= []).push('0..500000');
+  }
+  if (input.active != null && typeof input.active !== 'boolean') {
+    (errors.active ??= []).push('boolean');
+  }
+  return errors;
+}
+
+export async function listServicesBySalon(salonId: number) {
+  return await db.query.services.findMany({
+    where: (s, { eq }) => eq(s.salonId, String(salonId)),
+    orderBy: (s, { asc }) => [asc(s.title)],
+  });
+}
+
+export async function createService(salonId: number, input: ServiceInput) {
+  const errors = validateServiceInput(input);
+  if (Object.keys(errors).length) return { ok: false, status: 422, errors };
+
+  const inserted = await db
+    .insert(services)
+    .values({
+      salonId: String(salonId),
+      title: input.title.trim(),
+      durationMin: input.duration_min,
+      priceCents: input.price_cents,
+      active: input.active ?? true,
+    })
+    .returning();
+  return { ok: true, data: inserted[0] };
+}
+
+export async function updateService(
+  serviceId: number,
+  salonId: number,
+  input: Partial<ServiceInput>,
+) {
+  const errors = validateServiceInput({
+    title: input.title ?? 'xxx',
+    duration_min: input.duration_min ?? 60,
+    price_cents: input.price_cents ?? 0,
+    active: input.active,
+  });
+  if (input.title == null) delete errors.title;
+  if (input.duration_min == null) delete errors.duration_min;
+  if (input.price_cents == null) delete errors.price_cents;
+  if (Object.keys(errors).length) return { ok: false, status: 422, errors };
+
+  const existing = await db.query.services.findFirst({
+    where: (s, { and, eq }) =>
+      and(eq(s.id, String(serviceId)), eq(s.salonId, String(salonId))),
+  });
+  if (!existing)
+    return { ok: false, status: 404, errors: { id: ['not found in salon'] } };
+
+  const updated = await db
+    .update(services)
+    .set({
+      title: input.title != null ? input.title.trim() : existing.title,
+      durationMin: input.duration_min ?? existing.durationMin,
+      priceCents: input.price_cents ?? existing.priceCents,
+      active: input.active ?? existing.active,
+    })
+    .where(eq(services.id, String(serviceId)))
+    .returning();
+
+  return { ok: true, data: updated[0] };
+}
+
+export async function deleteService(serviceId: number, salonId: number) {
+  const existing = await db.query.services.findFirst({
+    where: (s, { and, eq }) =>
+      and(eq(s.id, String(serviceId)), eq(s.salonId, String(salonId))),
+  });
+  if (!existing)
+    return { ok: false, status: 404, errors: { id: ['not found in salon'] } };
+
+  const futureBooking = await db.query.bookings.findFirst({
+    where: (b, { and, eq, gt }) =>
+      and(eq(b.serviceId, String(serviceId)), gt(b.startsAt, new Date())),
+  });
+  if (futureBooking)
+    return { ok: false, status: 409, errors: { id: ['has future bookings'] } };
+
+  await db.delete(services).where(eq(services.id, String(serviceId)));
+  return { ok: true };
+}
+

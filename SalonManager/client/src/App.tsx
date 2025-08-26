@@ -12,6 +12,7 @@ import SalonBooking from "@/pages/salon-booking";
 import Profile from "@/pages/profile";
 import MyBookings from "@/pages/my-bookings";
 import AdminTodayPage from "@/pages/admin-today";
+import AdminServicesPage from "@/pages/admin-services";
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="/profile" component={Profile} />
             <Route path="/me/bookings" component={MyBookings} />
             <Route path="/admin/today" component={AdminTodayPage} />
+            <Route path="/admin/services" component={AdminServicesPage} />
             <Route>{() => <div style={{ padding: 24 }}>404 – Seite nicht gefunden</div>}</Route>
           </Switch>
         </TooltipProvider>
