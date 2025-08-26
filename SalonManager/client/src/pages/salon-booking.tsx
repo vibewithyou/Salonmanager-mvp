@@ -1,7 +1,8 @@
-import { useParams } from 'wouter';
+import { useParams, useLocation } from 'wouter';
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSalon } from '../hooks/useApi';
+import { apiPost } from '../lib/api';
 
 type ChosenService = {
   id: number;
@@ -11,6 +12,15 @@ type ChosenService = {
 };
 
 type ChosenSlot = { start: string; end: string; stylistId?: number | null };
+
+type BookingPayload = {
+  service_id: number;
+  stylist_id?: number | null;
+  starts_at: string;
+  note?: string | null;
+};
+
+type ApiFieldErrors = Record<string, string[]>;
 
 function todayISO() {
   const now = new Date();
@@ -67,6 +77,9 @@ export default function SalonBookingWizard() {
   const [note, setNote] = useState<string>('');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const isAuthed = useIsAuthenticated();
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<ApiFieldErrors>({});
 
   const minDate = todayISO();
   const maxDate = addDaysISO(minDate, 30);
@@ -116,13 +129,48 @@ export default function SalonBookingWizard() {
     staleTime: 30_000,
   });
 
-  function handleBookClick() {
+  const [, navigate] = useLocation();
+
+  async function handleBookClick() {
     if (!salon || !service || !slot) return;
     if (!isAuthed) {
       setShowLoginModal(true);
       return;
     }
-    // Prompt 26 will post booking
+
+    setSubmitting(true);
+    setSubmitError(null);
+    setFieldErrors({});
+
+    const payload: BookingPayload = {
+      service_id: service.id,
+      stylist_id: slot.stylistId ?? null,
+      starts_at: slot.start,
+      note: note.trim() ? note.trim() : null,
+    };
+
+    try {
+      await apiPost<{ booking_id: number }>(
+        `/api/v1/salons/${salon.id}/bookings`,
+        payload
+      );
+      alert('Buchung angelegt!');
+      navigate('/me/bookings');
+    } catch (e: any) {
+      try {
+        const msg = e.message ?? 'Fehler';
+        const maybe = JSON.parse(msg);
+        if (maybe?.errors) {
+          setFieldErrors(maybe.errors as ApiFieldErrors);
+        } else {
+          setSubmitError(msg);
+        }
+      } catch {
+        setSubmitError(e.message ?? 'Unbekannter Fehler');
+      }
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -388,6 +436,24 @@ export default function SalonBookingWizard() {
               className="w-full p-3 rounded-lg border border-[var(--border)] bg-[var(--surface)]"
             />
 
+            {Object.keys(fieldErrors).length > 0 && (
+              <div className="mt-3 p-3 rounded border border-red-300/50 bg-red-50/50 text-red-700 dark:text-red-300 text-sm">
+                <div className="font-medium mb-1">Bitte prüfe folgende Felder:</div>
+                <ul className="list-disc ml-5">
+                  {Object.entries(fieldErrors).map(([k, arr]) => (
+                    <li key={k}>
+                      <strong>{k}</strong>: {arr.join(', ')}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {submitError && (
+              <div className="mt-3 p-3 rounded border border-amber-300/50 bg-amber-50/50 text-amber-800 dark:text-amber-300 text-sm">
+                {submitError}
+              </div>
+            )}
+
             {!isAuthed && (
               <div className="mt-4 p-3 rounded border border-amber-300/40 bg-amber-50/40 text-amber-800 dark:text-amber-300 text-sm">
                 Du bist derzeit als <strong>Gast</strong> unterwegs. Zum Buchen bitte kurz
@@ -418,10 +484,12 @@ export default function SalonBookingWizard() {
         ) : (
           <button
             onClick={handleBookClick}
-            className="px-4 py-2 rounded bg-[var(--primary)] text-black font-medium hover:opacity-90"
+            disabled={submitting}
+            className="px-4 py-2 rounded bg-[var(--primary)] text-black font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-busy={submitting}
             aria-label="Buchung absenden"
           >
-            Buchen
+            {submitting ? 'Buchen…' : 'Buchen'}
           </button>
         )}
       </div>
