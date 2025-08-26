@@ -93,6 +93,43 @@ function iterateSlots(
   return slots;
 }
 
+function parseISO(iso: string): Date {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) throw new Error('invalid ISO date');
+  return d;
+}
+
+function endFromStart(startISO: string, durationMin: number): string {
+  const s = parseISO(startISO);
+  const e = new Date(s.getTime() + (durationMin + BUFFER_MIN) * 60_000);
+  return e.toISOString();
+}
+
+function within(a: Date, b: Date, x: Date) {
+  return a.getTime() <= x.getTime() && x.getTime() <= b.getTime();
+}
+
+function timeWithinWorkHours(
+  dateISO: string,
+  stylistId: number,
+  start: Date,
+  end: Date,
+  workHours: Array<{ weekday: number; start: string; end: string; stylist_id: number }>
+): boolean {
+  const weekday = start.getDay();
+  const rules = workHours.filter(w => w.stylist_id === stylistId && w.weekday === weekday);
+  if (rules.length === 0) return false;
+  return rules.some(rule => {
+    const wStart = toZoned(dateISO, rule.start);
+    const wEnd = toZoned(dateISO, rule.end);
+    return wStart <= start && end <= wEnd;
+  });
+}
+
+function overlapsRange(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) {
+  return aStart < bEnd && bStart < aEnd;
+}
+
 export type SalonListItem = {
   id: string;
   name: string;
@@ -162,7 +199,17 @@ export interface IStorage {
   getBookingsBySalon(salonId: string): Promise<BookingWithDetails[]>;
   getBookingsByStylist(stylistId: string): Promise<BookingWithDetails[]>;
   getBooking(id: string): Promise<BookingWithDetails | undefined>;
-  createBooking(booking: InsertBooking): Promise<Booking>;
+  createBooking(params: {
+    salonId: number;
+    customerId?: number | null;
+    serviceId: number;
+    stylistId?: number | null;
+    startsAtISO: string;
+    note?: string | null;
+  }): Promise<
+    | { ok: true; booking: { [k: string]: any } }
+    | { ok: false; status: number; error: Record<string, string[]> }
+  >;
   updateBooking(id: string, booking: Partial<InsertBooking>): Promise<Booking>;
 
   // Alias methods for tasks
@@ -527,27 +574,141 @@ export class DatabaseStorage implements IStorage {
     return booking;
   }
 
-  async createBooking(booking: InsertBooking): Promise<Booking> {
-    // overlap check: existing bookings for stylist intersecting time range
-    if (booking.stylistId) {
-      const conflicts = await db
-        .select({ id: bookings.id })
-        .from(bookings)
-        .where(
-          and(
-            eq(bookings.stylistId, booking.stylistId),
-            lt(bookings.startsAt, booking.endsAt),
-            gt(bookings.endsAt, booking.startsAt),
-            ne(bookings.status, "cancelled")
-          )
-        );
-      if (conflicts.length > 0) {
-        throw new Error("OVERLAP");
+  async createBooking(params: {
+    salonId: number;
+    customerId?: number | null;
+    serviceId: number;
+    stylistId?: number | null;
+    startsAtISO: string;
+    note?: string | null;
+  }): Promise<
+    | { ok: true; booking: { [k: string]: any } }
+    | { ok: false; status: number; error: Record<string, string[]> }
+  > {
+    const { salonId, customerId = null, serviceId, stylistId, startsAtISO, note = null } = params;
+
+    const svc = await db.query.services.findFirst({
+      where: (s, { and, eq }) => and(eq(s.id, String(serviceId)), eq(s.salonId, String(salonId)))
+    });
+    if (!svc || !svc.active) {
+      return { ok: false, status: 422, error: { service_id: ['not found in salon or inactive'] } };
+    }
+
+    let startsAt: Date;
+    try {
+      startsAt = parseISO(startsAtISO);
+    } catch {
+      return { ok: false, status: 422, error: { starts_at: ['invalid ISO datetime'] } };
+    }
+    const now = new Date();
+    if (startsAt.getTime() <= now.getTime()) {
+      return { ok: false, status: 422, error: { starts_at: ['must be in the future'] } };
+    }
+    const endsAtISO = endFromStart(startsAtISO, svc.durationMin ?? 60);
+    const endsAt = parseISO(endsAtISO);
+
+    let stylists: Array<{ id: string }> = [];
+    if (stylistId) {
+      const st = await db.query.stylists.findFirst({
+        where: (st, { and, eq }) => and(eq(st.id, String(stylistId)), eq(st.salonId, String(salonId)), eq(st.active, true))
+      });
+      if (!st) return { ok: false, status: 422, error: { stylist_id: ['not found in salon or inactive'] } };
+      stylists = [{ id: st.id }];
+    } else {
+      stylists = await db.query.stylists.findMany({
+        where: (st, { and, eq }) => and(eq(st.salonId, String(salonId)), eq(st.active, true))
+      });
+      if (stylists.length === 0) {
+        return { ok: false, status: 422, error: { stylist_id: ['no active stylist in salon'] } };
       }
     }
 
-    const [newBooking] = await db.insert(bookings).values(booking).returning();
-    return newBooking;
+    const dateISO = startsAtISO.slice(0, 10);
+    const weekday = startsAt.getDay();
+
+    const workHoursData = await db.query.workHours.findMany({
+      where: (w, { and, eq, inArray }) => and(
+        eq(w.salonId, String(salonId)),
+        eq(w.weekday, weekday),
+        inArray(w.stylistId, stylists.map(s => s.id))
+      )
+    });
+    const workHoursRows = workHoursData.map(w => ({
+      weekday: w.weekday,
+      start: w.startTime,
+      end: w.endTime,
+      stylist_id: w.stylistId,
+    }));
+
+    const dayStart = toZoned(dateISO, '00:00');
+    const dayEnd = toZoned(dateISO, '23:59');
+
+    const absencesRows = await db.query.absences.findMany({
+      where: (a, { and, eq, gte, lte, inArray }) => and(
+        eq(a.salonId, String(salonId)),
+        inArray(a.stylistId, stylists.map(s => s.id)),
+        lte(a.startsAt, dayEnd),
+        gte(a.endsAt, dayStart)
+      )
+    });
+
+    const bookingsRows = await db.query.bookings.findMany({
+      where: (b, { and, eq, ne, gte, lte, inArray }) => and(
+        eq(b.salonId, String(salonId)),
+        inArray(b.stylistId, stylists.map(s => s.id)),
+        ne(b.status, 'cancelled'),
+        lte(b.startsAt, dayEnd),
+        gte(b.endsAt, dayStart)
+      )
+    });
+
+    let chosenStylistId: string | null = stylistId ? String(stylistId) : null;
+    if (!chosenStylistId) {
+      for (const st of stylists) {
+        const inWH = timeWithinWorkHours(dateISO, Number(st.id), startsAt, endsAt, workHoursRows as any);
+        if (!inWH) continue;
+        const absent = absencesRows.some(a => a.stylistId === st.id && overlapsRange(startsAt, endsAt, new Date(a.startsAt), new Date(a.endsAt)));
+        if (absent) continue;
+        const hasOverlap = bookingsRows.some(b => b.stylistId === st.id && overlapsRange(startsAt, endsAt, new Date(b.startsAt), new Date(b.endsAt)));
+        if (hasOverlap) continue;
+        chosenStylistId = st.id;
+        break;
+      }
+      if (!chosenStylistId) {
+        return { ok: false, status: 422, error: { starts_at: ['no free stylist at this time'] } };
+      }
+    } else {
+      const inWH = timeWithinWorkHours(dateISO, Number(chosenStylistId), startsAt, endsAt, workHoursRows as any);
+      if (!inWH) return { ok: false, status: 422, error: { starts_at: ['outside work hours'] } };
+      const absent = absencesRows.some(a => a.stylistId === chosenStylistId && overlapsRange(startsAt, endsAt, new Date(a.startsAt), new Date(a.endsAt)));
+      if (absent) return { ok: false, status: 422, error: { starts_at: ['stylist absent'] } };
+      const hasOverlap = bookingsRows.some(b => b.stylistId === chosenStylistId && overlapsRange(startsAt, endsAt, new Date(b.startsAt), new Date(b.endsAt)));
+      if (hasOverlap) return { ok: false, status: 422, error: { starts_at: ['overlaps existing booking'] } };
+    }
+
+    const inserted = await db.insert(bookings).values({
+      salonId: String(salonId),
+      customerId: (customerId ? String(customerId) : null) as any,
+      stylistId: chosenStylistId!,
+      serviceId: String(serviceId),
+      startsAt,
+      endsAt,
+      status: 'requested',
+      note,
+    } as any).returning();
+
+    const b = inserted[0];
+    return { ok: true, booking: {
+      booking_id: b.id,
+      salon_id: b.salonId,
+      service_id: b.serviceId,
+      stylist_id: b.stylistId,
+      customer_id: b.customerId,
+      starts_at: b.startsAt,
+      ends_at: b.endsAt,
+      status: b.status,
+      note: b.note,
+    }};
   }
 
   async updateBooking(id: string, booking: Partial<InsertBooking>): Promise<Booking> {

@@ -2,8 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { insertSalonSchema, insertServiceSchema, insertStylistSchema, insertBookingSchema } from "@shared/schema";
-import { z } from "zod";
+import { insertSalonSchema, insertServiceSchema, insertStylistSchema } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -115,39 +114,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Protected routes
-  app.post('/api/v1/salons/:id/bookings', isAuthenticated, async (req: any, res) => {
+  app.post('/api/v1/salons/:id/bookings', async (req, res, next) => {
     try {
-      const userId = req.user.claims.sub;
-      const bookingData = insertBookingSchema.parse({
-        ...req.body,
-        salonId: req.params.id,
-        customerId: userId,
+      const salonId = Number(req.params.id);
+      if (!Number.isFinite(salonId)) return res.status(400).json({ message: 'Invalid salon id' });
+
+      const { service_id, stylist_id, starts_at, note } = req.body ?? {};
+      const errors: Record<string, string[]> = {};
+      if (!Number.isFinite(Number(service_id))) errors.service_id = ['required numeric'];
+      if (stylist_id != null && !Number.isFinite(Number(stylist_id))) errors.stylist_id = ['must be numeric'];
+      if (typeof starts_at !== 'string') errors.starts_at = ['required ISO string'];
+      if (Object.keys(errors).length) return res.status(422).json({ message: 'Validation failed', errors });
+
+      const result = await storage.createBooking({
+        salonId,
+        serviceId: Number(service_id),
+        stylistId: stylist_id == null ? null : Number(stylist_id),
+        startsAtISO: String(starts_at),
+        note: typeof note === 'string' ? note : null,
       });
 
-      const service = await storage.getService(bookingData.serviceId);
-      if (!service) {
-        return res.status(404).json({ message: "Service not found" });
+      if (!result.ok) {
+        return res.status(result.status || 422).json({ message: 'Validation failed', errors: result.error });
       }
-
-      const startsAt = new Date(bookingData.startsAt);
-      const endsAt = new Date(startsAt.getTime() + (service.durationMin + 5) * 60000);
-
-      try {
-        const booking = await storage.createBooking({
-          ...bookingData,
-          endsAt,
-        });
-        res.json(booking);
-      } catch (err: any) {
-        if (err instanceof Error && err.message === "OVERLAP") {
-          return res.status(422).json({ errors: { starts_at: ["overlap"] } });
-        }
-        throw err;
-      }
-    } catch (error) {
-      console.error("Error creating booking:", error);
-      res.status(500).json({ message: "Failed to create booking" });
-    }
+      return res.status(201).json(result.booking);
+    } catch (err) { next(err); }
   });
 
   app.get('/api/v1/bookings', isAuthenticated, async (req: any, res) => {
