@@ -111,6 +111,7 @@ export const bookings = pgTable("bookings", {
   startsAt: timestamp("starts_at").notNull(),
   endsAt: timestamp("ends_at").notNull(),
   status: varchar("status", { enum: ["requested", "confirmed", "declined", "cancelled"] }).notNull().default("requested"),
+  reminderSent: boolean("reminder_sent").notNull().default(false),
   note: text("note"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
