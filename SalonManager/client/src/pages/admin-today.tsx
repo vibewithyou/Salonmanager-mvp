@@ -1,5 +1,5 @@
 import { useLocation } from 'wouter';
-import { useSalonBookingsToday, BookingDto } from '../hooks/useApi';
+import { useSalonBookingsToday, BookingDto, useUpdateBookingStatus } from '../hooks/useApi';
 
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' });
@@ -24,6 +24,12 @@ export default function AdminTodayPage() {
   const salonId = Number(url.searchParams.get('s') ?? 1);
 
   const { data, isLoading, isError, error, refetch } = useSalonBookingsToday(salonId);
+  const mut = useUpdateBookingStatus(salonId);
+
+  function askReason(defaultText: string) {
+    const t = prompt(defaultText + ' (optional Grund):', '');
+    return t ?? '';
+  }
 
   return (
     <section className="max-w-6xl mx-auto px-4 py-8 text-[var(--on-surface)]">
@@ -111,7 +117,53 @@ export default function AdminTodayPage() {
                         {b.note ?? '—'}
                       </td>
                       <td className="px-3 py-2">
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
+                          {b.status === 'requested' && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  mut.mutate({ bookingId: b.id, status: 'confirmed' })
+                                }
+                                disabled={mut.isPending}
+                                className="px-3 py-1 rounded bg-[var(--primary)] text-black text-sm hover:opacity-90 disabled:opacity-50"
+                              >
+                                Bestätigen
+                              </button>
+                              <button
+                                onClick={() =>
+                                  mut.mutate({
+                                    bookingId: b.id,
+                                    status: 'declined',
+                                    reason: askReason('Ablehnen'),
+                                  })
+                                }
+                                disabled={mut.isPending}
+                                className="px-3 py-1 rounded border border-[var(--on-surface)]/30 hover:bg-[var(--muted)] text-sm"
+                              >
+                                Ablehnen
+                              </button>
+                            </>
+                          )}
+                          {b.status === 'confirmed' && (
+                            <button
+                              onClick={() => {
+                                if (confirm('Termin wirklich stornieren?')) {
+                                  mut.mutate({
+                                    bookingId: b.id,
+                                    status: 'cancelled',
+                                    reason: askReason('Stornieren'),
+                                  });
+                                }
+                              }}
+                              disabled={mut.isPending}
+                              className="px-3 py-1 rounded border border-[var(--on-surface)]/30 hover:bg-[var(--muted)] text-sm"
+                            >
+                              Stornieren
+                            </button>
+                          )}
+                          {(b.status === 'declined' || b.status === 'cancelled') && (
+                            <span className="text-xs opacity-70">keine Aktionen</span>
+                          )}
                           <button
                             onClick={() => navigate(`/salon/${b.salon_id}`)}
                             className="px-3 py-1 rounded border border-[var(--on-surface)]/30 hover:bg-[var(--muted)]"

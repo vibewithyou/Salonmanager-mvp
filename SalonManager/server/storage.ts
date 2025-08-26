@@ -1139,3 +1139,75 @@ export async function deleteService(serviceId: number, salonId: number) {
   return { ok: true };
 }
 
+// ---- Booking status update ----
+export type BookingStatus =
+  | 'requested'
+  | 'confirmed'
+  | 'declined'
+  | 'cancelled';
+
+function isAllowedTransition(from: BookingStatus, to: BookingStatus): boolean {
+  if (from === to) return false;
+  switch (from) {
+    case 'requested':
+      return to === 'confirmed' || to === 'declined';
+    case 'confirmed':
+      return to === 'cancelled';
+    case 'declined':
+    case 'cancelled':
+      return false;
+    default:
+      return false;
+  }
+}
+
+export async function updateBookingStatus(params: {
+  bookingId: number;
+  salonId: number;
+  to: BookingStatus;
+  reason?: string | null;
+}) {
+  const { bookingId, salonId, to, reason } = params;
+
+  const b = await db.query.bookings.findFirst({
+    where: (t, { and, eq }) => and(eq(t.id, String(bookingId)), eq(t.salonId, String(salonId))),
+  });
+  if (!b) return { ok: false, status: 404, errors: { id: ['not found in salon'] } };
+
+  const from = b.status as BookingStatus;
+  if (!isAllowedTransition(from, to)) {
+    return {
+      ok: false,
+      status: 422,
+      errors: { status: [`transition ${from}→${to} not allowed`] },
+    };
+  }
+
+  const noteAppend = reason?.trim()
+    ? `[${new Date().toISOString()}] status ${from}→${to}: ${reason.trim()}`
+    : null;
+  const newNote = noteAppend ? (b.note ? `${b.note}\n\n${noteAppend}` : noteAppend) : b.note;
+
+  const updated = await db
+    .update(bookings)
+    .set({ status: to, note: newNote })
+    .where(eq(bookings.id, String(bookingId)))
+    .returning();
+
+  const u = updated[0];
+  return {
+    ok: true,
+    data: {
+      id: u.id,
+      salon_id: u.salonId,
+      service_id: u.serviceId,
+      stylist_id: u.stylistId,
+      customer_id: u.customerId,
+      starts_at: u.startsAt,
+      ends_at: u.endsAt,
+      status: u.status,
+      note: u.note,
+    },
+  };
+}
+

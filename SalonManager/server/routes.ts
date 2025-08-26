@@ -1,6 +1,13 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage, listServicesBySalon, createService, updateService, deleteService } from "./storage";
+import {
+  storage,
+  listServicesBySalon,
+  createService,
+  updateService,
+  deleteService,
+  updateBookingStatus,
+} from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -187,19 +194,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch('/api/v1/bookings/:id', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/v1/bookings/:id', isAuthenticated, async (req: any, res, next) => {
     try {
-      const { status } = req.body;
-      
-      if (!["confirmed", "declined", "cancelled"].includes(status)) {
-        return res.status(400).json({ message: "Invalid status" });
+      const bookingId = Number(req.params.id);
+      const salonId = Number(req.query.salon_id);
+      const { status, reason } = req.body ?? {};
+
+      if (!Number.isFinite(bookingId) || !Number.isFinite(salonId)) {
+        return res
+          .status(400)
+          .json({ message: 'Bad request: booking id & salon_id required' });
+      }
+      if (
+        !['requested', 'confirmed', 'declined', 'cancelled'].includes(
+          String(status),
+        )
+      ) {
+        return res.status(400).json({ message: 'Bad request: invalid status' });
       }
 
-      const booking = await storage.updateBookingStatus(req.params.id, status);
-      res.json(booking);
-    } catch (error) {
-      console.error("Error updating booking:", error);
-      res.status(500).json({ message: "Failed to update booking" });
+      const result = await updateBookingStatus({
+        bookingId,
+        salonId,
+        to: status,
+        reason: typeof reason === 'string' ? reason : null,
+      });
+
+      if (!result.ok)
+        return res
+          .status(result.status!)
+          .json({ message: 'Validation failed', errors: result.errors });
+      res.json(result.data);
+    } catch (err) {
+      next(err);
     }
   });
 

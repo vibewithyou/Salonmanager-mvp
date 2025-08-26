@@ -106,6 +106,30 @@ export function useSalonBookingsToday(salonId: number) {
   });
 }
 
+export function useUpdateBookingStatus(salonId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      bookingId: number;
+      status: 'confirmed' | 'declined' | 'cancelled';
+      reason?: string;
+    }) => {
+      const r = await fetch(`/api/v1/bookings/${input.bookingId}?salon_id=${salonId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ status: input.status, reason: input.reason ?? null }),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return await r.json();
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['bookings', 'salon'] });
+      qc.invalidateQueries({ queryKey: ['bookings', 'salon', 'today'] });
+    },
+  });
+}
+
 // ---- Services Admin CRUD ----
 export type ServiceDto = {
   id: number;
