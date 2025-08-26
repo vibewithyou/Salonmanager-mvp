@@ -70,7 +70,10 @@ export default {
           800: "var(--dark-800)",
           900: "var(--dark-900)",
           950: "var(--dark-950)",
-        }
+        },
+        app: "var(--bg)",
+        surface: "var(--surface)",
+        on: "var(--on-surface)",
       },
       fontFamily: {
         sans: ["Inter", "sans-serif"],

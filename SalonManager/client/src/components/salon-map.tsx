@@ -45,10 +45,10 @@ export default function SalonMap({ salons, onBookNow }: SalonMapProps) {
         
         const popupContent = `
           <div class="p-3 min-w-[200px]">
-            <h3 class="font-semibold text-lg mb-2">${salon.name}</h3>
-            <p class="text-sm text-gray-600 mb-3">${salon.address}</p>
-            <button 
-              class="w-full bg-yellow-500 hover:bg-yellow-600 text-black px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
+            <h3 class="font-semibold text-lg mb-2 text-[var(--on-surface)]">${salon.name}</h3>
+            <p class="text-sm text-[var(--on-surface)]/70 mb-3">${salon.address}</p>
+            <button
+              class="w-full bg-[var(--primary)] hover:opacity-90 text-black px-3 py-2 rounded-lg text-sm font-semibold transition-colors"
               onclick="window.dispatchEvent(new CustomEvent('salon-book', { detail: '${salon.id}' }))"
             >
               Termin buchen
@@ -88,7 +88,7 @@ export default function SalonMap({ salons, onBookNow }: SalonMapProps) {
   return (
     <div 
       ref={mapRef} 
-      className="w-full h-96 rounded-xl shadow-lg mb-8 bg-gray-100 dark:bg-dark-800"
+      className="w-full h-96 rounded-xl shadow-lg mb-8 bg-[var(--surface)]"
       data-testid="salon-map"
     />
   );

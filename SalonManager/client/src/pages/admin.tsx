@@ -228,7 +228,7 @@ export default function Admin() {
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-dark-800 divide-y divide-gray-200 dark:divide-gray-700">
+                  <tbody className="bg-[var(--surface)] divide-y divide-[var(--border)]">
                     {services.map((service) => (
                       <tr key={service.id} className="hover:bg-gray-50 dark:hover:bg-dark-700" data-testid={`service-row-${service.id}`}>
                         <td className="px-6 py-4 whitespace-nowrap">

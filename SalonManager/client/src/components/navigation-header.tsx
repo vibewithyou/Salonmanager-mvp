@@ -20,13 +20,13 @@ export default function NavigationHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white/90 dark:bg-dark-950/90 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800">
+    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--surface)]/90 text-[var(--on-surface)] backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <Link href="/">
-                <h1 className="text-2xl font-bold text-gold-500 cursor-pointer" data-testid="logo">
+                <h1 className="text-2xl font-bold text-[var(--primary)] cursor-pointer" data-testid="logo">
                   SalonManager
                 </h1>
               </Link>
@@ -37,8 +37,8 @@ export default function NavigationHeader() {
                   <a
                     className={`px-3 py-2 text-sm font-medium transition-colors ${
                       location === "/salons"
-                        ? "text-gold-500"
-                        : "text-gray-700 dark:text-gray-300 hover:text-gold-500"
+                        ? "text-[var(--primary)]"
+                        : "text-[var(--on-surface)]/80 hover:text-[var(--primary)]"
                     }`}
                     data-testid="nav-salons"
                   >
@@ -49,8 +49,8 @@ export default function NavigationHeader() {
                   <a
                     className={`px-3 py-2 text-sm font-medium transition-colors ${
                       location === (user?.role === 'customer' ? '/me/bookings' : '/dashboard')
-                        ? "text-gold-500"
-                        : "text-gray-700 dark:text-gray-300 hover:text-gold-500"
+                        ? "text-[var(--primary)]"
+                        : "text-[var(--on-surface)]/80 hover:text-[var(--primary)]"
                     }`}
                     data-testid="nav-dashboard"
                   >
@@ -62,8 +62,8 @@ export default function NavigationHeader() {
                     <a
                       className={`px-3 py-2 text-sm font-medium transition-colors ${
                         location === "/admin"
-                          ? "text-gold-500"
-                          : "text-gray-700 dark:text-gray-300 hover:text-gold-500"
+                          ? "text-[var(--primary)]"
+                          : "text-[var(--on-surface)]/80 hover:text-[var(--primary)]"
                       }`}
                       data-testid="nav-admin"
                     >
@@ -74,22 +74,22 @@ export default function NavigationHeader() {
               </nav>
             )}
           </div>
-          
+
           <div className="flex items-center space-x-4">
             {/* Theme Toggle */}
             <Button
               variant="ghost"
               size="sm"
               onClick={toggleTheme}
-              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-800 transition-colors"
+              className="p-2 rounded-lg hover:bg-[var(--muted)] transition-colors"
               data-testid="button-theme-toggle"
             >
               {theme === 'dark' ? (
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-[var(--on-surface)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
                 </svg>
               ) : (
-                <svg className="w-5 h-5 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-[var(--on-surface)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
                 </svg>
               )}
@@ -101,7 +101,7 @@ export default function NavigationHeader() {
                   <button
                     onClick={() => navigate('/profile')}
                     aria-label="Profil öffnen"
-                    className="w-8 h-8 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-full flex items-center justify-center hover:opacity-90 transition-colors"
+                    className="w-8 h-8 bg-[var(--primary)] text-black rounded-full flex items-center justify-center hover:opacity-90 transition-colors"
                     data-testid="button-profile-icon"
                   >
                     <span className="font-semibold text-sm" data-testid="text-user-initials">
@@ -125,7 +125,7 @@ export default function NavigationHeader() {
             ) : (
               <Button
                 onClick={() => window.location.href = '/api/login'}
-                className="bg-gold-500 hover:bg-gold-600 text-dark-900"
+                className="bg-[var(--primary)] hover:opacity-90 text-black"
                 data-testid="button-login"
               >
                 Anmelden

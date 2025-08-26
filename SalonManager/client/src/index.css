@@ -3,34 +3,40 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Base color tokens */
 :root {
-  --background: hsl(0, 0%, 100%);
-  --foreground: hsl(0, 0%, 10%);
-  --card: hsl(0, 0%, 100%);
-  --card-foreground: hsl(0, 0%, 10%);
-  --popover: hsl(0, 0%, 100%);
-  --popover-foreground: hsl(0, 0%, 10%);
-  --primary: hsl(45, 100%, 51%);
-  --primary-foreground: hsl(0, 0%, 10%);
-  --secondary: hsl(0, 0%, 96%);
-  --secondary-foreground: hsl(0, 0%, 10%);
-  --muted: hsl(0, 0%, 96%);
-  --muted-foreground: hsl(0, 0%, 45%);
-  --accent: hsl(0, 0%, 96%);
-  --accent-foreground: hsl(0, 0%, 10%);
+  --primary: #FFD700;
+  --bg: #F7F7F8;
+  --surface: #FFFFFF;
+  --on-surface: #1A1B1E;
+  --muted: rgba(0, 0, 0, 0.06);
+  --border: rgba(0, 0, 0, 0.12);
+
+  /* Backwards-compat variables for shadcn components */
+  --background: var(--bg);
+  --foreground: var(--on-surface);
+  --card: var(--surface);
+  --card-foreground: var(--on-surface);
+  --popover: var(--surface);
+  --popover-foreground: var(--on-surface);
+  --primary-foreground: var(--on-surface);
+  --secondary: var(--muted);
+  --secondary-foreground: var(--on-surface);
+  --muted-foreground: var(--on-surface);
+  --accent: var(--muted);
+  --accent-foreground: var(--on-surface);
   --destructive: hsl(0, 84%, 60%);
   --destructive-foreground: hsl(0, 0%, 98%);
-  --border: hsl(0, 0%, 90%);
-  --input: hsl(0, 0%, 90%);
-  --ring: hsl(45, 100%, 51%);
-  --chart-1: hsl(45, 100%, 51%);
+  --input: var(--border);
+  --ring: var(--primary);
+  --chart-1: var(--primary);
   --chart-2: hsl(160, 100%, 36%);
   --chart-3: hsl(30, 100%, 50%);
   --chart-4: hsl(280, 65%, 60%);
   --chart-5: hsl(340, 75%, 55%);
   --radius: 0.75rem;
-  
-  /* SalonManager specific colors */
+
+  /* Brand palettes */
   --gold-50: hsl(45, 100%, 96%);
   --gold-100: hsl(45, 93%, 90%);
   --gold-200: hsl(45, 93%, 80%);
@@ -40,7 +46,7 @@
   --gold-700: hsl(45, 80%, 35%);
   --gold-800: hsl(45, 70%, 25%);
   --gold-900: hsl(45, 60%, 15%);
-  
+
   --dark-50: hsl(0, 0%, 97%);
   --dark-100: hsl(0, 0%, 94%);
   --dark-700: hsl(0, 0%, 20%);
@@ -50,25 +56,29 @@
 }
 
 .dark {
-  --background: hsl(0, 0%, 7%);
-  --foreground: hsl(0, 0%, 92%);
-  --card: hsl(0, 0%, 10%);
-  --card-foreground: hsl(0, 0%, 92%);
-  --popover: hsl(0, 0%, 7%);
-  --popover-foreground: hsl(0, 0%, 92%);
-  --primary: hsl(45, 100%, 51%);
-  --primary-foreground: hsl(0, 0%, 10%);
-  --secondary: hsl(0, 0%, 10%);
-  --secondary-foreground: hsl(0, 0%, 92%);
-  --muted: hsl(0, 0%, 10%);
-  --muted-foreground: hsl(0, 0%, 60%);
-  --accent: hsl(0, 0%, 10%);
-  --accent-foreground: hsl(0, 0%, 92%);
+  --bg: #0B0C0E;
+  --surface: #111318;
+  --on-surface: #EDEDED;
+  --muted: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.14);
+
+  /* Backwards-compat variables */
+  --background: var(--bg);
+  --foreground: var(--on-surface);
+  --card: var(--surface);
+  --card-foreground: var(--on-surface);
+  --popover: var(--surface);
+  --popover-foreground: var(--on-surface);
+  --primary-foreground: var(--on-surface);
+  --secondary: var(--muted);
+  --secondary-foreground: var(--on-surface);
+  --muted-foreground: var(--on-surface);
+  --accent: var(--muted);
+  --accent-foreground: var(--on-surface);
   --destructive: hsl(0, 84%, 60%);
   --destructive-foreground: hsl(0, 0%, 98%);
-  --border: hsl(0, 0%, 15%);
-  --input: hsl(0, 0%, 15%);
-  --ring: hsl(45, 100%, 51%);
+  --input: var(--border);
+  --ring: var(--primary);
 }
 
 @layer base {
@@ -127,6 +137,12 @@
   .bg-dark-950 {
     background-color: var(--dark-950);
   }
+
+  /* Convenience classes for theme tokens */
+  .bg-surface { background-color: var(--surface); }
+  .bg-app { background-color: var(--bg); }
+  .text-on { color: var(--on-surface); }
+  .border-ui { border-color: var(--border); }
 }
 
 /* Leaflet map styles */
