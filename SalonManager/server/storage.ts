@@ -157,12 +157,12 @@ export class DatabaseStorage implements IStorage {
       .where(inArray(services.salonId, salonRows.map((s) => s.id)));
 
     const serviceMap = new Map<string, { id: string; title: string; price_cents: number }[]>();
-    for (const s of serviceRows) {
-      if (!serviceMap.has(s.salonId)) serviceMap.set(s.salonId, []);
-      serviceMap.get(s.salonId)!.push({
-        id: s.id,
-        title: s.title,
-        price_cents: s.price_cents,
+    for (const row of serviceRows) {
+      if (!serviceMap.has(row.salonId)) serviceMap.set(row.salonId, []);
+      serviceMap.get(row.salonId)!.push({
+        id: row.id,
+        title: row.title,
+        price_cents: row.price_cents,
       });
     }
 
@@ -173,7 +173,7 @@ export class DatabaseStorage implements IStorage {
       address: s.address,
       lat: s.lat !== null ? Number(s.lat) : null,
       lng: s.lng !== null ? Number(s.lng) : null,
-      services: serviceMap.get(s.id) ?? [],
+      services: (serviceMap.get(s.id) ?? []).slice(0, 3),
     }));
   }
 

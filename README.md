@@ -18,7 +18,12 @@
    ```json
    { "ok": true }
    ```
-4. Open `http://localhost:5000` in your browser.
+4. Quick test the list endpoint:
+   ```bash
+   curl http://localhost:5000/api/v1/salons | jq
+   ```
+   Expect an array of salons.
+5. Open `http://localhost:5000` in your browser.
 
 ### .env example
 
