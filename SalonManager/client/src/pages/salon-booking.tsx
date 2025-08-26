@@ -1,5 +1,6 @@
 import { useParams } from 'wouter';
 import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useSalon } from '../hooks/useApi';
 
 type ChosenService = {
@@ -9,18 +10,35 @@ type ChosenService = {
   price_cents: number;
 };
 
+type ChosenSlot = { start: string; end: string; stylistId?: number | null };
+
+function todayISO() {
+  const now = new Date();
+  const tz = 'Europe/Berlin';
+  const fmt = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  return fmt.format(now);
+}
+
 export default function SalonBookingWizard() {
   const { id } = useParams<{ id: string }>();
   const { data: salon, isLoading, isError, error, refetch } = useSalon(id!);
   const [step, setStep] = useState(0);
   const [service, setService] = useState<ChosenService | null>(null);
+  const [date, setDate] = useState<string>(todayISO());
+  const [slot, setSlot] = useState<ChosenSlot | null>(null);
 
   const steps = ['Service wählen', 'Datum & Uhrzeit', 'Bestätigen'];
 
   const canNext = useMemo(() => {
     if (step === 0) return !!service;
+    if (step === 1) return !!slot;
     return true;
-  }, [step, service]);
+  }, [step, service, slot]);
 
   const next = () => setStep(s => Math.min(s + 1, steps.length - 1));
   const prev = () => setStep(s => Math.max(s - 1, 0));
@@ -31,6 +49,33 @@ export default function SalonBookingWizard() {
       currency: 'EUR',
     }).format(cents / 100);
   }
+
+  const {
+    data: slots,
+    isLoading: slotsLoading,
+    isError: slotsError,
+    error: slotsErr,
+    refetch: refetchSlots,
+  } = useQuery({
+    queryKey: ['slots', id, service?.id, date],
+    queryFn: async () => {
+      if (!service) return [];
+      const qs = new URLSearchParams({
+        service_id: String(service.id),
+        date,
+      });
+      const r = await fetch(`/api/v1/salons/${id}/slots?` + qs.toString(), {
+        credentials: 'include',
+      });
+      if (!r.ok) {
+        const msg = await r.text();
+        throw new Error(msg || `HTTP ${r.status}`);
+      }
+      return (await r.json()) as Array<{ start: string; end: string; stylistId?: number }>;
+    },
+    enabled: step === 1 && !!service && !!date,
+    staleTime: 30_000,
+  });
 
   return (
     <section className="max-w-3xl mx-auto px-4 py-8 text-[var(--on-surface)]">
@@ -122,7 +167,118 @@ export default function SalonBookingWizard() {
           </>
         )}
 
-        {step === 1 && <div>Step 2 (Datum & Uhrzeit) – kommt in Prompt 21–23</div>}
+        {step === 1 && (
+          <>
+            <h2 className="text-lg font-semibold mb-4">2) Datum & Uhrzeit</h2>
+
+            {/* Datumsauswahl */}
+            <div className="mb-4 flex items-center gap-3">
+              <label
+                htmlFor="booking-date"
+                className="text-sm opacity-80"
+              >
+                Datum
+              </label>
+              <input
+                id="booking-date"
+                type="date"
+                value={date}
+                onChange={e => {
+                  setDate(e.target.value);
+                  setSlot(null);
+                }}
+                className="px-3 py-2 rounded border border-[var(--border)] bg-[var(--surface)]"
+                aria-label="Datum auswählen"
+              />
+            </div>
+
+            {/* Slots */}
+            {!service && (
+              <div className="text-sm text-amber-600">
+                Bitte zuerst in Schritt 1 einen Service wählen.
+              </div>
+            )}
+
+            {service && slotsLoading && (
+              <div>Verfügbare Zeiten werden geladen…</div>
+            )}
+
+            {service && slotsError && (
+              <div className="p-3 rounded border border-[var(--border)] bg-[var(--surface)]">
+                <div className="text-red-600 text-sm mb-2">
+                  Konnte Slots nicht laden.
+                </div>
+                <pre className="text-xs opacity-80 whitespace-pre-wrap">
+                  {(slotsErr as Error).message}
+                </pre>
+                <button
+                  onClick={() => refetchSlots()}
+                  className="mt-2 px-3 py-2 rounded border border-[var(--on-surface)]/30"
+                >
+                  Erneut laden
+                </button>
+                <div className="text-xs opacity-70 mt-2">
+                  Hinweis: Falls die Slots-API (Prompt 22) noch nicht implementiert ist,
+                  erscheint dieser Fehler.
+                </div>
+              </div>
+            )}
+
+            {service && !slotsLoading && !slotsError && (
+              <>
+                {!slots || slots.length === 0 ? (
+                  <div className="opacity-80">
+                    Keine freien Zeiten für dieses Datum.
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {slots.map((sl, idx) => {
+                      const active =
+                        slot?.start === sl.start && slot?.end === sl.end;
+                      const start = new Date(sl.start);
+                      const label = start.toLocaleTimeString('de-DE', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      });
+                      return (
+                        <button
+                          key={idx}
+                          onClick={() =>
+                            setSlot({
+                              start: sl.start,
+                              end: sl.end,
+                              stylistId: sl.stylistId,
+                            })
+                          }
+                          className={`px-3 py-2 rounded border text-sm ${
+                            active
+                              ? 'border-[var(--primary)] ring-2 ring-[var(--primary)]/40'
+                              : 'border-[var(--border)] hover:bg-[var(--muted)]'
+                          }`}
+                          aria-pressed={active}
+                          aria-label={`Zeit ${label} wählen`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {slot && (
+                  <div className="mt-3 text-sm opacity-90">
+                    Gewählt:{' '}
+                    <strong>
+                      {new Date(slot.start).toLocaleTimeString('de-DE', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </strong>
+                  </div>
+                )}
+              </>
+            )}
+          </>
+        )}
         {step === 2 && <div>Step 3 (Bestätigen) – kommt in Prompt 24–26</div>}
       </div>
 
