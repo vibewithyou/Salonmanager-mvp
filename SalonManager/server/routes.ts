@@ -44,8 +44,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/v1/salons/:id', async (req, res, next) => {
     try {
-      const id = req.params.id;
-      if (!/^[0-9a-fA-F-]{36}$/.test(id)) {
+      const id = Number(req.params.id);
+      if (Number.isNaN(id)) {
         return res.status(400).json({ message: 'Invalid id' });
       }
 

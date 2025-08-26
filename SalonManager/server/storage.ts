@@ -65,7 +65,7 @@ export interface IStorage {
 
   // Salon operations
   getSalons(): Promise<SalonListItem[]>;
-  getSalon(id: string): Promise<SalonDetail | null>;
+  getSalon(id: number): Promise<SalonDetail | null>;
   getSalonBySlug(slug: string): Promise<SalonDetail | null>;
   createSalon(salon: InsertSalon): Promise<Salon>;
 
@@ -177,7 +177,8 @@ export class DatabaseStorage implements IStorage {
     }));
   }
 
-  async getSalon(id: string): Promise<SalonDetail | null> {
+  async getSalon(id: number): Promise<SalonDetail | null> {
+    const idStr = String(id);
     const [salon] = await db
       .select({
         id: salons.id,
@@ -191,7 +192,7 @@ export class DatabaseStorage implements IStorage {
         open_hours_json: salons.openHoursJson,
       })
       .from(salons)
-      .where(eq(salons.id, id));
+      .where(eq(salons.id, idStr));
 
     if (!salon) return null;
 
@@ -204,7 +205,7 @@ export class DatabaseStorage implements IStorage {
         active: services.active,
       })
       .from(services)
-      .where(eq(services.salonId, id));
+      .where(eq(services.salonId, idStr));
 
     const stylistRows = await db
       .select({
@@ -214,7 +215,7 @@ export class DatabaseStorage implements IStorage {
         active: stylists.active,
       })
       .from(stylists)
-      .where(eq(stylists.salonId, id));
+      .where(eq(stylists.salonId, idStr));
 
     return {
       ...salon,
@@ -239,7 +240,7 @@ export class DatabaseStorage implements IStorage {
   async getSalonBySlug(slug: string): Promise<SalonDetail | null> {
     const [salon] = await db.select().from(salons).where(eq(salons.slug, slug));
     if (!salon) return null;
-    return this.getSalon(salon.id);
+    return this.getSalon(Number(salon.id));
   }
 
   async createSalon(salon: InsertSalon): Promise<Salon> {
