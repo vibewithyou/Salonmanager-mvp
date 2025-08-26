@@ -6,6 +6,10 @@ import {
   createService,
   updateService,
   deleteService,
+  listStylistsBySalon,
+  createStylist,
+  updateStylist,
+  deleteStylist,
   updateBookingStatus,
 } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
@@ -90,13 +94,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/v1/salons/:id/stylists', async (req, res) => {
+  // Stylists CRUD
+  app.get('/api/v1/salons/:id/stylists', async (req, res, next) => {
     try {
-      const stylists = await storage.getStylistsBySalon(req.params.id);
-      res.json(stylists);
-    } catch (error) {
-      console.error("Error fetching stylists:", error);
-      res.status(500).json({ message: "Failed to fetch stylists" });
+      const salonId = Number(req.params.id);
+      if (!Number.isFinite(salonId))
+        return res.status(400).json({ message: 'invalid salon id' });
+      const items = await listStylistsBySalon(salonId);
+      const mapped = items.map((st) => ({
+        id: st.id,
+        salon_id: st.salonId,
+        display_name: st.displayName,
+        avatar_url: st.avatarUrl,
+        active: st.active,
+      }));
+      res.json(mapped);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.post('/api/v1/salons/:id/stylists', async (req, res, next) => {
+    try {
+      const salonId = Number(req.params.id);
+      if (!Number.isFinite(salonId))
+        return res.status(400).json({ message: 'invalid salon id' });
+      const { display_name, avatar_url, active } = req.body ?? {};
+      const result = await createStylist(salonId, {
+        display_name,
+        avatar_url,
+        active,
+      });
+      if (!result.ok)
+        return res
+          .status(result.status!)
+          .json({ message: 'Validation failed', errors: result.errors });
+      const d = result.data!;
+      res
+        .status(201)
+        .json({
+          id: d.id,
+          salon_id: d.salonId,
+          display_name: d.displayName,
+          avatar_url: d.avatarUrl,
+          active: d.active,
+        });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.patch('/api/v1/stylists/:stylistId', async (req, res, next) => {
+    try {
+      const stylistId = Number(req.params.stylistId);
+      const salonId = Number(req.query.salon_id);
+      if (!Number.isFinite(stylistId) || !Number.isFinite(salonId))
+        return res
+          .status(400)
+          .json({ message: 'stylistId & salon_id required' });
+      const { display_name, avatar_url, active } = req.body ?? {};
+      const result = await updateStylist(stylistId, salonId, {
+        display_name,
+        avatar_url,
+        active,
+      });
+      if (!result.ok)
+        return res
+          .status(result.status!)
+          .json({ message: 'Validation failed', errors: result.errors });
+      const d = result.data!;
+      res.json({
+        id: d.id,
+        salon_id: d.salonId,
+        display_name: d.displayName,
+        avatar_url: d.avatarUrl,
+        active: d.active,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  app.delete('/api/v1/stylists/:stylistId', async (req, res, next) => {
+    try {
+      const stylistId = Number(req.params.stylistId);
+      const salonId = Number(req.query.salon_id);
+      if (!Number.isFinite(stylistId) || !Number.isFinite(salonId))
+        return res
+          .status(400)
+          .json({ message: 'stylistId & salon_id required' });
+      const result = await deleteStylist(stylistId, salonId);
+      if (!result.ok)
+        return res
+          .status(result.status!)
+          .json({ message: 'Validation failed', errors: result.errors });
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
     }
   });
 

@@ -1211,3 +1211,126 @@ export async function updateBookingStatus(params: {
   };
 }
 
+// ---- Stylist CRUD ----
+export type StylistInput = {
+  display_name: string;
+  avatar_url?: string | null;
+  active?: boolean;
+};
+
+function validateStylistInput(input: Partial<StylistInput>) {
+  const errors: Record<string, string[]> = {};
+  if (input.display_name != null) {
+    const name = input.display_name.trim();
+    if (name.length < 2) (errors.display_name ??= []).push('min length 2');
+    if (name.length > 80) (errors.display_name ??= []).push('max length 80');
+  } else {
+    (errors.display_name ??= []).push('required');
+  }
+  if (input.avatar_url != null && typeof input.avatar_url !== 'string') {
+    (errors.avatar_url ??= []).push('must be string or null');
+  }
+  if (input.active != null && typeof input.active !== 'boolean') {
+    (errors.active ??= []).push('boolean');
+  }
+  return errors;
+}
+
+export async function listStylistsBySalon(salonId: number) {
+  return await db.query.stylists.findMany({
+    where: (st, { eq }) => eq(st.salonId, String(salonId)),
+    orderBy: (st, { asc }) => [asc(st.displayName)],
+  });
+}
+
+export async function createStylist(salonId: number, input: StylistInput) {
+  const errors = validateStylistInput(input);
+  if (Object.keys(errors).length) return { ok: false, status: 422, errors };
+
+  const [user] = await db
+    .insert(users)
+    .values({ firstName: input.display_name.trim(), role: 'stylist' })
+    .returning({ id: users.id });
+
+  const inserted = await db
+    .insert(stylists)
+    .values({
+      salonId: String(salonId),
+      userId: user.id,
+      displayName: input.display_name.trim(),
+      avatarUrl: input.avatar_url ?? null,
+      active: input.active ?? true,
+    })
+    .returning();
+  return { ok: true, data: inserted[0] };
+}
+
+export async function updateStylist(
+  stylistId: number,
+  salonId: number,
+  input: Partial<StylistInput>,
+) {
+  const fakeBase: StylistInput = {
+    display_name: input.display_name ?? 'xx',
+    avatar_url: input.avatar_url ?? null,
+    active: input.active ?? true,
+  };
+  const errors = validateStylistInput(fakeBase);
+  if (input.display_name == null) delete errors.display_name;
+  if (input.avatar_url === undefined) delete errors.avatar_url;
+  if (input.active === undefined) delete errors.active;
+  if (Object.keys(errors).length) return { ok: false, status: 422, errors };
+
+  const existing = await db.query.stylists.findFirst({
+    where: (st, { and, eq }) =>
+      and(eq(st.id, String(stylistId)), eq(st.salonId, String(salonId))),
+  });
+  if (!existing)
+    return { ok: false, status: 404, errors: { id: ['not found in salon'] } };
+
+  const updated = await db
+    .update(stylists)
+    .set({
+      displayName:
+        input.display_name != null
+          ? input.display_name.trim()
+          : existing.displayName,
+      avatarUrl:
+        input.avatar_url !== undefined
+          ? input.avatar_url ?? null
+          : existing.avatarUrl,
+      active: input.active ?? existing.active,
+    })
+    .where(eq(stylists.id, String(stylistId)))
+    .returning();
+
+  return { ok: true, data: updated[0] };
+}
+
+export async function deleteStylist(stylistId: number, salonId: number) {
+  const existing = await db.query.stylists.findFirst({
+    where: (st, { and, eq }) =>
+      and(eq(st.id, String(stylistId)), eq(st.salonId, String(salonId))),
+  });
+  if (!existing)
+    return { ok: false, status: 404, errors: { id: ['not found in salon'] } };
+
+  const futureBooking = await db.query.bookings.findFirst({
+    where: (b, { and, eq, gt, ne }) =>
+      and(
+        eq(b.stylistId, String(stylistId)),
+        gt(b.startsAt, new Date()),
+        ne(b.status, 'cancelled'),
+      ),
+  });
+  if (futureBooking)
+    return {
+      ok: false,
+      status: 409,
+      errors: { id: ['stylist has future bookings'] },
+    };
+
+  await db.delete(stylists).where(eq(stylists.id, String(stylistId)));
+  return { ok: true };
+}
+

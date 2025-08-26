@@ -211,3 +211,83 @@ export function useDeleteService(salonId: number) {
       qc.invalidateQueries({ queryKey: ['services', salonId] }),
   });
 }
+
+// ---- Stylists CRUD ----
+export type StylistDto = {
+  id: number;
+  salon_id: number;
+  display_name: string;
+  avatar_url: string | null;
+  active: boolean;
+};
+
+export function useStylists(salonId: number) {
+  return useQuery({
+    queryKey: ['stylists', salonId],
+    queryFn: async () => {
+      const r = await fetch(`/api/v1/salons/${salonId}/stylists`, {
+        credentials: 'include',
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return (await r.json()) as StylistDto[];
+    },
+    staleTime: 30_000,
+  });
+}
+
+export function useCreateStylist(salonId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: {
+      display_name: string;
+      avatar_url?: string | null;
+      active?: boolean;
+    }) => {
+      const r = await fetch(`/api/v1/salons/${salonId}/stylists`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return await r.json();
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['stylists', salonId] }),
+  });
+}
+
+export function useUpdateStylist(salonId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: number } & Partial<StylistDto>) => {
+      const { id, ...patch } = input;
+      const r = await fetch(`/api/v1/stylists/${id}?salon_id=${salonId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(patch),
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return await r.json();
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['stylists', salonId] }),
+  });
+}
+
+export function useDeleteStylist(salonId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const r = await fetch(`/api/v1/stylists/${id}?salon_id=${salonId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+      if (!r.ok) throw new Error(await r.text());
+      return await r.json();
+    },
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: ['stylists', salonId] }),
+  });
+}
