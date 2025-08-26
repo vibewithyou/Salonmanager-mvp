@@ -33,13 +33,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Public routes
-  app.get('/api/v1/salons', async (req, res) => {
+  app.get('/api/v1/salons', async (_req, res, next) => {
     try {
-      const salons = await storage.getSalons();
-      res.json(salons);
-    } catch (error) {
-      console.error("Error fetching salons:", error);
-      res.status(500).json({ message: "Failed to fetch salons" });
+      const data = await storage.getSalons();
+      res.json(data);
+    } catch (err) {
+      next(err);
     }
   });
 

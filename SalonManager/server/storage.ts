@@ -22,7 +22,17 @@ import {
   type BookingWithDetails,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, gte, lte, or, desc, asc, lt, gt, ne } from "drizzle-orm";
+import { eq, and, gte, lte, or, desc, asc, lt, gt, ne, inArray } from "drizzle-orm";
+
+export type SalonListItem = {
+  id: string;
+  name: string;
+  slug: string;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  services: Array<{ id: string; title: string; price_cents: number }>;
+};
 
 export interface IStorage {
   // User operations (required for Replit Auth)
@@ -30,7 +40,7 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
 
   // Salon operations
-  getSalons(): Promise<Salon[]>;
+  getSalons(): Promise<SalonListItem[]>;
   getSalon(id: string): Promise<SalonWithDetails | undefined>;
   getSalonBySlug(slug: string): Promise<SalonWithDetails | undefined>;
   createSalon(salon: InsertSalon): Promise<Salon>;
@@ -98,8 +108,49 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Salon operations
-  async getSalons(): Promise<Salon[]> {
-    return await db.select().from(salons);
+  async getSalons(): Promise<SalonListItem[]> {
+    const salonRows = await db
+      .select({
+        id: salons.id,
+        name: salons.name,
+        slug: salons.slug,
+        address: salons.address,
+        lat: salons.lat,
+        lng: salons.lng,
+      })
+      .from(salons);
+
+    if (salonRows.length === 0) return [];
+
+    const serviceRows = await db
+      .select({
+        id: services.id,
+        salonId: services.salonId,
+        title: services.title,
+        price_cents: services.priceCents,
+      })
+      .from(services)
+      .where(inArray(services.salonId, salonRows.map((s) => s.id)));
+
+    const serviceMap = new Map<string, { id: string; title: string; price_cents: number }[]>();
+    for (const s of serviceRows) {
+      if (!serviceMap.has(s.salonId)) serviceMap.set(s.salonId, []);
+      serviceMap.get(s.salonId)!.push({
+        id: s.id,
+        title: s.title,
+        price_cents: s.price_cents,
+      });
+    }
+
+    return salonRows.map((s) => ({
+      id: s.id,
+      name: s.name,
+      slug: s.slug,
+      address: s.address,
+      lat: s.lat !== null ? Number(s.lat) : null,
+      lng: s.lng !== null ? Number(s.lng) : null,
+      services: serviceMap.get(s.id) ?? [],
+    }));
   }
 
   async getSalon(id: string): Promise<SalonWithDetails | undefined> {
