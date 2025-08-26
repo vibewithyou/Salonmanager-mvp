@@ -51,6 +51,12 @@ function addDaysISO(baseISO: string, days: number) {
   return d.toISOString().slice(0, 10);
 }
 
+function useIsAuthenticated(): boolean {
+  // MVP-Stub: später durch echte Session prüfen.
+  // Zum Testen kann dieser Wert angepasst werden.
+  return false;
+}
+
 export default function SalonBookingWizard() {
   const { id } = useParams<{ id: string }>();
   const { data: salon, isLoading, isError, error, refetch } = useSalon(id!);
@@ -58,6 +64,9 @@ export default function SalonBookingWizard() {
   const [service, setService] = useState<ChosenService | null>(null);
   const [date, setDate] = useState<string>(todayISO());
   const [slot, setSlot] = useState<ChosenSlot | null>(null);
+  const [note, setNote] = useState<string>('');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const isAuthed = useIsAuthenticated();
 
   const minDate = todayISO();
   const maxDate = addDaysISO(minDate, 30);
@@ -106,6 +115,15 @@ export default function SalonBookingWizard() {
     enabled: step === 1 && !!service && !!date,
     staleTime: 30_000,
   });
+
+  function handleBookClick() {
+    if (!salon || !service || !slot) return;
+    if (!isAuthed) {
+      setShowLoginModal(true);
+      return;
+    }
+    // Prompt 26 will post booking
+  }
 
   return (
     <section className="max-w-3xl mx-auto px-4 py-8 text-[var(--on-surface)]">
@@ -316,7 +334,68 @@ export default function SalonBookingWizard() {
             )}
           </>
         )}
-        {step === 2 && <div>Step 3 (Bestätigen) – kommt in Prompt 24–26</div>}
+        {step === 2 && salon && service && slot && (
+          <>
+            <h2 className="text-lg font-semibold mb-4">3) Bestätigen</h2>
+
+            <div className="grid gap-3 mb-4 sm:grid-cols-2">
+              <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+                <div className="text-sm opacity-70 mb-1">Salon</div>
+                <div className="font-medium">{salon.name}</div>
+                {salon.address && (
+                  <div className="text-sm opacity-80">{salon.address}</div>
+                )}
+              </div>
+
+              <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+                <div className="text-sm opacity-70 mb-1">Service</div>
+                <div className="font-medium">{service.title}</div>
+                <div className="text-sm opacity-80">
+                  Dauer: {service.duration_min} min · Preis:{' '}
+                  {formatPriceCents(service.price_cents)}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+                <div className="text-sm opacity-70 mb-1">Datum & Uhrzeit</div>
+                <div className="font-medium">
+                  {new Date(slot.start).toLocaleDateString('de-DE', {
+                    weekday: 'long',
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                  })}
+                </div>
+                <div className="text-sm opacity-80">
+                  {labelTime(slot.start)} – {labelTime(slot.end)}
+                </div>
+              </div>
+
+              <div className="p-4 rounded-lg border border-[var(--border)] bg-[var(--surface)]">
+                <div className="text-sm opacity-70 mb-1">Stylist</div>
+                <div className="font-medium">
+                  {slot.stylistId ? `#${slot.stylistId}` : 'Beliebig (wird zugewiesen)'}
+                </div>
+              </div>
+            </div>
+
+            <div className="mb-2 text-sm opacity-80">Notiz (optional)</div>
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              rows={3}
+              placeholder="z. B. Seiten kurz, Kontur sauber"
+              className="w-full p-3 rounded-lg border border-[var(--border)] bg-[var(--surface)]"
+            />
+
+            {!isAuthed && (
+              <div className="mt-4 p-3 rounded border border-amber-300/40 bg-amber-50/40 text-amber-800 dark:text-amber-300 text-sm">
+                Du bist derzeit als <strong>Gast</strong> unterwegs. Zum Buchen bitte kurz
+                einloggen (oder später registrieren).
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Bottom Bar */}
@@ -328,14 +407,53 @@ export default function SalonBookingWizard() {
         >
           Zurück
         </button>
-        <button
-          onClick={next}
-          disabled={!canNext}
-          className="px-4 py-2 rounded bg-[var(--primary)] text-black font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {step === steps.length - 1 ? 'Fertig' : 'Weiter'}
-        </button>
+        {step < 2 ? (
+          <button
+            onClick={() => setStep(s => Math.min(s + 1, 2))}
+            disabled={!canNext}
+            className="px-4 py-2 rounded bg-[var(--primary)] text-black font-medium hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Weiter
+          </button>
+        ) : (
+          <button
+            onClick={handleBookClick}
+            className="px-4 py-2 rounded bg-[var(--primary)] text-black font-medium hover:opacity-90"
+            aria-label="Buchung absenden"
+          >
+            Buchen
+          </button>
+        )}
       </div>
+
+      {/* Login-Modal (Stub) */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-[92%] max-w-md rounded-lg border border-[var(--border)] bg-[var(--surface)] p-5">
+            <h3 className="text-lg font-semibold mb-2">Anmelden erforderlich</h3>
+            <p className="text-sm opacity-80 mb-4">
+              Bitte melde dich an, um den Termin zu buchen. Du kannst dich später jederzeit
+              registrieren.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowLoginModal(false)}
+                className="px-3 py-2 rounded border border-[var(--on-surface)]/30 hover:bg-[var(--muted)]"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={() => {
+                  setShowLoginModal(false);
+                }}
+                className="px-3 py-2 rounded bg-[var(--primary)] text-black font-medium hover:opacity-90"
+              >
+                Jetzt anmelden
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
