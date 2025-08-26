@@ -54,13 +54,19 @@ export default function SalonDetailPage() {
           )}
         </div>
 
-        {/* (Haupt-CTA kommt in Prompt 18, hier noch zurückhaltend) */}
         <div className="flex gap-2">
           <button
             onClick={() => navigate('/salons')}
             className="px-4 py-2 rounded border border-[var(--on-surface)]/30 hover:bg-[var(--muted)]"
           >
             Zurück zur Übersicht
+          </button>
+          <button
+            onClick={() => navigate(`/salon/${s.id}/book`)}
+            className="px-4 py-2 rounded bg-[var(--primary)] text-black font-medium hover:opacity-90 focus:ring-2 focus:ring-offset-2 focus:ring-[var(--primary)]"
+            aria-label={`Termin bei ${s.name} buchen`}
+          >
+            Jetzt buchen
           </button>
         </div>
       </div>
