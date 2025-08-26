@@ -3,4 +3,5 @@ declare module 'react-leaflet' {
   export const TileLayer: any;
   export const Marker: any;
   export const Tooltip: any;
+  export const Popup: any;
 }
