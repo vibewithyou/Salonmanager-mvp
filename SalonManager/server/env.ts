@@ -39,6 +39,8 @@ const SMTP_PORT = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT,10) : u
 const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 const ENABLE_DEV_SEED = bool(process.env.ENABLE_DEV_SEED);
+const IMPRESSUM_HTML = process.env.IMPRESSUM_HTML || '';
+const PRIVACY_HTML = process.env.PRIVACY_HTML || '';
 
 if (!DATABASE_URL) {
   console.warn('[env] DATABASE_URL is not set');
@@ -56,4 +58,6 @@ export const env = {
   SMTP_USER,
   SMTP_PASS,
   ENABLE_DEV_SEED,
+  IMPRESSUM_HTML,
+  PRIVACY_HTML,
 };

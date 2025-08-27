@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { env } from "./env";
+import { legalRouter } from './routes/legal';
 import { isSQLite } from "./db";
 import "./jobs/reminder";
 
@@ -53,6 +54,7 @@ const apiLimiter = rateLimit({
   message: { message: 'Rate limit exceeded' }
 });
 app.use('/api', apiLimiter);
+app.use('/api/v1', legalRouter);
 
 app.use((req, res, next) => {
   const start = Date.now();
