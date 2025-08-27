@@ -1,4 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
+import helmet from 'helmet';
+import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { env } from "./env";
@@ -6,8 +9,50 @@ import { isSQLite } from "./db";
 import "./jobs/reminder";
 
 const app = express();
+
+// Trust proxy (for deployments behind proxies)
+app.set('trust proxy', 1);
+
+// Security: Helmet with CSP allowing map tiles and inline styles in dev
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https://*.tile.openstreetmap.org'],
+      connectSrc: ["'self'", ...env.ALLOWED_ORIGINS],
+      fontSrc: ["'self'", 'data:'],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: env.NODE_ENV === 'production' ? [] : null,
+    }
+  }
+}));
+
+// CORS
+app.use(cors({
+  origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
+    if (!origin) return cb(null, true);
+    return env.ALLOWED_ORIGINS.includes(origin) ? cb(null, true) : cb(new Error('CORS blocked'));
+  },
+  credentials: true,
+}));
+
+// Body parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+// Rate limit for API routes
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Rate limit exceeded' }
+});
+app.use('/api', apiLimiter);
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -39,15 +84,36 @@ app.use((req, res, next) => {
   next();
 });
 
+// Healthcheck
+app.get('/healthz', (_req, res) => {
+  res.json({
+    ok: true,
+    env: env.NODE_ENV,
+    time: new Date().toISOString(),
+    origins: env.ALLOWED_ORIGINS,
+  });
+});
+
 (async () => {
   const server = await registerRoutes(app);
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+  // 404 for unknown API routes
+  app.use('/api', (_req, res) => {
+    res.status(404).json({ message: 'Not found' });
+  });
 
-    res.status(status).json({ message });
-    throw err;
+  // Global error handler
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    const status = typeof err.status === 'number' ? err.status : 500;
+    const payload: any = { message: err?.message || 'Internal Server Error' };
+    if (err?.errors && typeof err.errors === 'object') payload.errors = err.errors;
+    if (status >= 500) {
+      console.error('[error]', err);
+    } else {
+      console.warn('[warn]', status, err?.message);
+    }
+    res.status(status).json(payload);
   });
 
   // importantly only setup vite in development and after

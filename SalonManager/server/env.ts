@@ -25,9 +25,10 @@ function bool(v: string | undefined) {
   return v === 'true' || v === '1';
 }
 
+const NODE_ENV = process.env.NODE_ENV ?? 'development';
 const PORT = parseInt(process.env.PORT || '5000', 10);
 const APP_PUBLIC_URL = process.env.APP_PUBLIC_URL || 'http://localhost:5173';
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
   .split(',')
   .map(s => s.trim())
   .filter(Boolean);
@@ -44,6 +45,7 @@ if (!DATABASE_URL) {
 }
 
 export const env = {
+  NODE_ENV,
   PORT,
   APP_PUBLIC_URL,
   ALLOWED_ORIGINS,
