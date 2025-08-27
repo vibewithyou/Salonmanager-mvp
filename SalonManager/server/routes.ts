@@ -21,21 +21,13 @@ import {
   deleteAbsence,
 } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { registerDevSeedRoute } from "./routes/devSeed";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
-  // Seed data - run this once to populate the database
-  app.post('/api/v1/seed', async (_req, res) => {
-    try {
-      await storage.seedDemo();
-      res.json({ ok: true });
-    } catch (error) {
-      console.error('Error seeding data:', error);
-      res.status(500).json({ ok: false, message: 'Failed to seed data' });
-    }
-  });
+  registerDevSeedRoute(app);
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
