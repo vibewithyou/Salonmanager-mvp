@@ -11,6 +11,7 @@ import SalonDetail from "@/pages/salon-detail";
 import SalonBooking from "@/pages/salon-booking";
 import Profile from "@/pages/profile";
 import MyBookings from "@/pages/my-bookings";
+import Checkout from "@/pages/checkout";
 import AdminTodayPage from "@/pages/admin-today";
 import AdminServicesPage from "@/pages/admin-services";
 import AdminStylistsPage from "@/pages/admin-stylists";
@@ -33,8 +34,9 @@ export default function App() {
             <Route path="/salons" component={Salons} />
             <Route path="/salon/:id" component={SalonDetail} />
             <Route path="/salon/:id/book" component={SalonBooking} />
-            <Route path="/profile" component={Profile} />
-            <Route path="/me/bookings" component={MyBookings} />
+              <Route path="/profile" component={Profile} />
+              <Route path="/checkout" component={Checkout} />
+              <Route path="/me/bookings" component={MyBookings} />
             <Route path="/admin/today" component={AdminTodayPage} />
             <Route path="/admin/services" component={AdminServicesPage} />
             <Route path="/admin/stylists" component={AdminStylistsPage} />
