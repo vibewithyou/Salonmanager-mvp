@@ -1,9 +1,30 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useLocation } from 'wouter';
 
-// Simple static page based on provided HTML design
+// Simple static page based on provided HTML design with basic filtering state
 export default function FiltersPage() {
-  const services = ['Haircut','Coloring','Manicure','Pedicure','Facial'];
-  const ratings = ['4 stars & up','3 stars & up','2 stars & up','1 star & up'];
+  const [, navigate] = useLocation();
+  const services = ['Haircut', 'Coloring', 'Manicure', 'Pedicure', 'Facial'];
+  const ratings = ['4 stars & up', '3 stars & up', '2 stars & up', '1 star & up'];
+
+  const [search, setSearch] = useState('');
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [rating, setRating] = useState('');
+
+  function toggleService(name: string) {
+    setSelectedServices((prev) =>
+      prev.includes(name) ? prev.filter((s) => s !== name) : [...prev, name]
+    );
+  }
+
+  function applyFilters() {
+    const params = new URLSearchParams();
+    if (search) params.set('q', search);
+    if (selectedServices.length) params.set('services', selectedServices.join(','));
+    if (rating) params.set('rating', rating);
+    navigate(`/salons?${params.toString()}`);
+  }
+
   return (
     <div className="relative flex min-h-screen flex-col bg-[#181611] overflow-x-hidden">
       {/* Map background */}
@@ -23,6 +44,8 @@ export default function FiltersPage() {
             </div>
             <input
               placeholder="Search for a salon"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="flex-1 bg-[#26241c] text-white px-2 py-3 placeholder:text-[#b8b29d] focus:outline-none"
             />
           </div>
@@ -66,6 +89,8 @@ export default function FiltersPage() {
               <label key={svc} className="flex gap-x-3 py-3">
                 <input
                   type="checkbox"
+                  checked={selectedServices.includes(svc)}
+                  onChange={() => toggleService(svc)}
                   className="h-5 w-5 rounded border-2 border-[#534d3c] bg-transparent text-[#e6b319] focus:ring-0"
                 />
                 <p className="text-white text-base">{svc}</p>
@@ -78,16 +103,27 @@ export default function FiltersPage() {
             {ratings.map((r) => (
               <label
                 key={r}
-                className="text-sm font-medium flex items-center justify-center rounded-lg border border-[#534d3c] px-4 h-11 text-white cursor-pointer"
+                className={`text-sm font-medium flex items-center justify-center rounded-lg border px-4 h-11 cursor-pointer ${
+                  rating === r ? 'border-[#e6b319]' : 'border-[#534d3c] text-white'
+                }`}
               >
                 {r}
-                <input type="radio" className="invisible absolute" name="rating" />
+                <input
+                  type="radio"
+                  className="invisible absolute"
+                  name="rating"
+                  checked={rating === r}
+                  onChange={() => setRating(r)}
+                />
               </label>
             ))}
           </div>
         </div>
         <div className="flex px-4 py-3">
-          <button className="flex-1 h-10 rounded-lg bg-[#e6b319] text-[#181611] text-sm font-bold">
+          <button
+            onClick={applyFilters}
+            className="flex-1 h-10 rounded-lg bg-[#e6b319] text-[#181611] text-sm font-bold"
+          >
             Apply Filters
           </button>
         </div>
