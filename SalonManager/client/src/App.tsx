@@ -18,6 +18,7 @@ import AdminWorkHoursPage from "@/pages/admin-workhours";
 import AdminAbsencesPage from "@/pages/admin-absences";
 import ImpressumPage from "@/pages/Impressum";
 import DatenschutzPage from "@/pages/Datenschutz";
+import FiltersPage from "@/pages/filters";
 import Footer from "@/components/Footer";
 
 export default function App() {
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="/admin/stylists" component={AdminStylistsPage} />
             <Route path="/admin/workhours" component={AdminWorkHoursPage} />
             <Route path="/admin/absences" component={AdminAbsencesPage} />
+            <Route path="/filters" component={FiltersPage} />
             <Route path="/impressum" component={ImpressumPage} />
             <Route path="/datenschutz" component={DatenschutzPage} />
             <Route>{() => <div style={{ padding: 24 }}>404 – Seite nicht gefunden</div>}</Route>
