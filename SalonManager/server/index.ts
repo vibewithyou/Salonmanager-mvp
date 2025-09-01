@@ -1,7 +1,4 @@
 import express, { type Request, Response, NextFunction } from "express";
-import helmet from 'helmet';
-import cors from 'cors';
-import rateLimit from 'express-rate-limit';
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { env } from "./env";
@@ -14,46 +11,12 @@ const app = express();
 // Trust proxy (for deployments behind proxies)
 app.set('trust proxy', 1);
 
-// Security: Helmet with CSP allowing map tiles and inline styles in dev
-app.use(helmet({
-  crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: {
-    useDefaults: true,
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      imgSrc: ["'self'", 'data:', 'https://*.tile.openstreetmap.org'],
-      connectSrc: ["'self'", ...env.ALLOWED_ORIGINS],
-      fontSrc: ["'self'", 'data:'],
-      objectSrc: ["'none'"],
-      upgradeInsecureRequests: env.NODE_ENV === 'production' ? [] : null,
-    }
-  }
-}));
-
-// CORS
-app.use(cors({
-  origin: (origin: string | undefined, cb: (err: Error | null, allow?: boolean) => void) => {
-    if (!origin) return cb(null, true);
-    return env.ALLOWED_ORIGINS.includes(origin) ? cb(null, true) : cb(new Error('CORS blocked'));
-  },
-  credentials: true,
-}));
 
 // Body parsers
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Rate limit for API routes
-const apiLimiter = rateLimit({
-  windowMs: 60 * 1000,
-  max: 60,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { message: 'Rate limit exceeded' }
-});
-app.use('/api', apiLimiter);
+// minimal dev-only server: security middlewares like helmet/cors/ratelimit are omitted
 app.use('/api/v1', legalRouter);
 
 app.use((req, res, next) => {

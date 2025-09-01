@@ -11,7 +11,8 @@ async function runReminder() {
     const in25h = new Date(now.getTime() + 25 * 60 * 60 * 1000);
 
     const bookings = await db.query.bookings.findMany({
-      where: (b, { and, eq, gt, lt }) => and(
+      // drizzle's callback params lack inferred types in this file, so annotate as any
+      where: (b: any, { and, eq, gt, lt }: any) => and(
         eq(b.status, 'confirmed'),
         eq(b.reminderSent, false),
         gt(b.startsAt, in24h),

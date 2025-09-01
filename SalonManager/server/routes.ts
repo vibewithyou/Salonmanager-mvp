@@ -101,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!Number.isFinite(salonId))
         return res.status(400).json({ message: 'invalid salon id' });
       const items = await listStylistsBySalon(salonId);
-      const mapped = items.map((st) => ({
+      const mapped = items.map((st: any) => ({
         id: st.id,
         salon_id: st.salonId,
         display_name: st.displayName,

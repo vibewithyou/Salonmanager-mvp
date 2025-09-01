@@ -1,22 +1,10 @@
-import { drizzle as drizzlePg } from 'drizzle-orm/node-postgres';
-import { drizzle as drizzleSqlite } from 'drizzle-orm/better-sqlite3';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import Database from 'better-sqlite3';
 import * as schema from '@shared/schema';
 import { env } from './env';
 
-const url = env.DATABASE_URL;
-export const isSQLite = url.startsWith('file:');
-
-let db: any;
-if (isSQLite) {
-  const sqlite = new Database(url.replace('file:', ''));
-  db = drizzleSqlite(sqlite, { schema });
-  console.log(`[db] SQLite ${url}`);
-} else {
-  const pool = new Pool({ connectionString: url });
-  db = drizzlePg(pool, { schema });
-  console.log(`[db] Postgres ${url}`);
-}
-
-export { db };
+// This environment is only configured for Postgres connections.
+const pool = new Pool({ connectionString: env.DATABASE_URL });
+export const isSQLite = false;
+export const db = drizzle(pool, { schema });
+console.log(`[db] Postgres ${env.DATABASE_URL}`);
